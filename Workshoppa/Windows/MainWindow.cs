@@ -100,7 +100,7 @@ internal sealed class MainWindow : Window
 
         ImGui.Separator();
         ImGui.Text("Queue:");
-        //ImGui.BeginDisabled();
+        ImGui.BeginDisabled(_plugin.CurrentStage != Stage.Stopped);
         for (int i = 0; i < _configuration.ItemQueue.Count; ++ i)
         {
             ImGui.PushID($"ItemQueue{i}");
@@ -141,10 +141,10 @@ internal sealed class MainWindow : Window
 
             ImGui.EndCombo();
         }
-        //ImGui.EndDisabled();
+        ImGui.EndDisabled();
 
         ImGui.Separator();
-        ImGui.Text($"Stage: {_plugin.CurrentStage}");
+        ImGui.Text($"Debug (Stage): {_plugin.CurrentStage}");
     }
 
     private void Save()
