@@ -14,7 +14,10 @@ partial class WorkshopPlugin
     private void SelectCraftBranch()
     {
         if (SelectSelectString("contrib", 0, s => s.StartsWith("Contribute materials.")))
+        {
             CurrentStage = Stage.ContributeMaterials;
+            _continueAt = DateTime.Now.AddSeconds(1);
+        }
         else if (SelectSelectString("advance", 0, s => s.StartsWith("Advance to the next phase of production.")))
         {
             PluginLog.Information("Phase is complete");
@@ -73,6 +76,7 @@ partial class WorkshopPlugin
             };
             addonMaterialDelivery->FireCallback(4, contributeMaterial);
             CurrentStage = Stage.ConfirmMaterialDelivery;
+            _continueAt = DateTime.Now.AddSeconds(0.5);
             break;
         }
     }
@@ -105,6 +109,11 @@ partial class WorkshopPlugin
                 CurrentStage = Stage.ContributeMaterials;
                 _continueAt = DateTime.Now.AddSeconds(1);
             }
+        }
+        else if (DateTime.Now > _continueAt.AddSeconds(20))
+        {
+            PluginLog.Warning("No confirmation dialog, falling back to previous stage");
+            CurrentStage = Stage.ContributeMaterials;
         }
     }
 
