@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Numerics;
+using Dalamud.Game.ClientState;
 using Dalamud.Interface;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Windowing;
@@ -14,16 +15,18 @@ internal sealed class MainWindow : Window
 {
     private readonly WorkshopPlugin _plugin;
     private readonly DalamudPluginInterface _pluginInterface;
+    private readonly ClientState _clientState;
     private readonly Configuration _configuration;
     private readonly WorkshopCache _workshopCache;
 
     private string _searchString = string.Empty;
 
-    public MainWindow(WorkshopPlugin plugin, DalamudPluginInterface pluginInterface, Configuration configuration, WorkshopCache workshopCache)
+    public MainWindow(WorkshopPlugin plugin, DalamudPluginInterface pluginInterface, ClientState clientState, Configuration configuration, WorkshopCache workshopCache)
         : base("Workshoppa###WorkshoppaMainWindow")
     {
         _plugin = plugin;
         _pluginInterface = pluginInterface;
+        _clientState = clientState;
         _configuration = configuration;
         _workshopCache = workshopCache;
 
@@ -42,6 +45,9 @@ internal sealed class MainWindow : Window
     public bool NearFabricationStation { get; set; } = false;
     public ButtonState State { get; set; } = ButtonState.None;
 
+    public bool IsDiscipleOfHand =>
+        _clientState.LocalPlayer != null && _clientState.LocalPlayer.ClassJob.Id is >= 8 and <= 15;
+
     public override void Draw()
     {
         var currentItem = _configuration.CurrentlyCraftedItem;
@@ -53,6 +59,7 @@ internal sealed class MainWindow : Window
             ImGui.BeginDisabled(!NearFabricationStation);
             if (_plugin.CurrentStage == Stage.Stopped)
             {
+                ImGui.BeginDisabled(!IsDiscipleOfHand);
                 if (currentItem.StartedCrafting)
                 {
                     if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Play, "Resume"))
@@ -63,6 +70,7 @@ internal sealed class MainWindow : Window
                     if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Play, "Start Crafting"))
                         State = ButtonState.Start;
                 }
+                ImGui.EndDisabled();
 
                 ImGui.SameLine();
                 ImGui.BeginDisabled(!ImGui.GetIO().KeyCtrl);
@@ -92,7 +100,7 @@ internal sealed class MainWindow : Window
         {
             ImGui.Text("Currently Crafting: ---");
 
-            ImGui.BeginDisabled(!NearFabricationStation || _configuration.ItemQueue.Sum(x => x.Quantity) == 0 || _plugin.CurrentStage != Stage.Stopped);
+            ImGui.BeginDisabled(!NearFabricationStation || _configuration.ItemQueue.Sum(x => x.Quantity) == 0 || _plugin.CurrentStage != Stage.Stopped || !IsDiscipleOfHand);
             if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Play, "Start Crafting"))
                 State = ButtonState.Start;
             ImGui.EndDisabled();
@@ -101,6 +109,7 @@ internal sealed class MainWindow : Window
         ImGui.Separator();
         ImGui.Text("Queue:");
         ImGui.BeginDisabled(_plugin.CurrentStage != Stage.Stopped);
+        Configuration.QueuedItem? itemToRemove = null;
         for (int i = 0; i < _configuration.ItemQueue.Count; ++ i)
         {
             ImGui.PushID($"ItemQueue{i}");
@@ -115,7 +124,22 @@ internal sealed class MainWindow : Window
                 Save();
             }
 
+            ImGui.OpenPopupOnItemClick($"###Context{i}");
+            if (ImGui.BeginPopupContextItem($"###Context{i}"))
+            {
+                if (ImGui.MenuItem($"Remove {craft.Name}"))
+                    itemToRemove = item;
+
+                ImGui.EndPopup();
+            }
+
             ImGui.PopID();
+        }
+
+        if (itemToRemove != null)
+        {
+            _configuration.ItemQueue.Remove(itemToRemove);
+            Save();
         }
 
         ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);

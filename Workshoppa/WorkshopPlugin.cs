@@ -68,7 +68,7 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
         _configuration = (Configuration?)_pluginInterface.GetPluginConfig() ?? new Configuration();
         _workshopCache = new WorkshopCache(dataManager);
 
-        _mainWindow = new(this, _pluginInterface, _configuration, _workshopCache) { IsOpen = true };
+        _mainWindow = new(this, _pluginInterface, _clientState, _configuration, _workshopCache) { IsOpen = true };
         _windowSystem.AddWindow(_mainWindow);
 
         _pluginInterface.UiBuilder.Draw += _windowSystem.Draw;
