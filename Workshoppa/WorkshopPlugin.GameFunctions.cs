@@ -5,7 +5,6 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.Types;
-using Dalamud.Logging;
 using Dalamud.Memory;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
@@ -20,7 +19,7 @@ partial class WorkshopPlugin
 {
     private unsafe void InteractWithTarget(GameObject obj)
     {
-        PluginLog.Information($"Setting target to {obj}");
+        _pluginLog.Information($"Setting target to {obj}");
         /*
         if (_targetManager.Target == null || _targetManager.Target != obj)
         {
@@ -109,12 +108,9 @@ partial class WorkshopPlugin
         var unitManagers = &AtkStage.GetSingleton()->RaptureAtkUnitManager->AtkUnitManager.DepthLayerOneList;
         for (var i = 0; i < 18; i++)
         {
-            var unitManager = &unitManagers[i];
-            var unitBaseArray = &(unitManager->AtkUnitEntries);
-            for (var j = 0; j < unitManager->Count; j++)
+            foreach (AtkUnitBase* unitBase in unitManagers[i].EntriesSpan)
             {
-                var unitBase = unitBaseArray[j];
-                if (unitBase->ID == id)
+                if (unitBase != null && unitBase->ID == id)
                 {
                     return unitBase;
                 }
@@ -138,7 +134,7 @@ partial class WorkshopPlugin
                 return false;
 
             var text = MemoryHelper.ReadSeStringNullTerminated((nint)textPointer).ToString();
-            PluginLog.Information($"SelectSelectString for {marker}, Choice would be '{text}'");
+            _pluginLog.Verbose($"SelectSelectString for {marker}, Choice would be '{text}'");
             if (predicate(text))
             {
                 addonSelectString->AtkUnitBase.FireCallbackInt(choice);
@@ -158,13 +154,13 @@ partial class WorkshopPlugin
             text = text.Replace("\n", "").Replace("\r", "");
             if (predicate(text))
             {
-                PluginLog.Information($"Selecting choice {choice} for '{text}'");
+                _pluginLog.Information($"Selecting choice {choice} for '{text}'");
                 addonSelectYesno->AtkUnitBase.FireCallbackInt(choice);
                 return true;
             }
             else
             {
-                PluginLog.Warning($"Text {text} does not match");
+                _pluginLog.Verbose($"Text {text} does not match");
             }
         }
 
@@ -218,7 +214,7 @@ partial class WorkshopPlugin
         }
         catch (Exception e)
         {
-            PluginLog.Warning(e, "Could not parse CompanyCraftMaterial info");
+            _pluginLog.Warning(e, "Could not parse CompanyCraftMaterial info");
         }
 
         return null;

@@ -1,26 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Numerics;
-using Dalamud.Data;
-using Dalamud.Game;
-using Dalamud.Game.ClientState;
 using Dalamud.Game.ClientState.Conditions;
-using Dalamud.Game.ClientState.Objects;
-using Dalamud.Game.ClientState.Objects.Enums;
-using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Game.Command;
-using Dalamud.Game.Gui;
 using Dalamud.Interface.Windowing;
-using Dalamud.Logging;
-using Dalamud.Memory;
 using Dalamud.Plugin;
-using FFXIVClientStructs.FFXIV.Client.Game;
-using FFXIVClientStructs.FFXIV.Client.Game.Control;
-using FFXIVClientStructs.FFXIV.Client.UI.Agent;
-using FFXIVClientStructs.FFXIV.Component.GUI;
+using Dalamud.Plugin.Services;
 using Workshoppa.External;
 using Workshoppa.GameData;
 using Workshoppa.Windows;
@@ -35,12 +21,13 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
     private readonly WindowSystem _windowSystem = new WindowSystem(nameof(WorkshopPlugin));
 
     private readonly DalamudPluginInterface _pluginInterface;
-    private readonly GameGui _gameGui;
-    private readonly Framework _framework;
-    private readonly Condition _condition;
-    private readonly ClientState _clientState;
-    private readonly ObjectTable _objectTable;
-    private readonly CommandManager _commandManager;
+    private readonly IGameGui _gameGui;
+    private readonly IFramework _framework;
+    private readonly ICondition _condition;
+    private readonly IClientState _clientState;
+    private readonly IObjectTable _objectTable;
+    private readonly ICommandManager _commandManager;
+    private readonly IPluginLog _pluginLog;
 
     private readonly Configuration _configuration;
     private readonly YesAlreadyIpc _yesAlreadyIpc;
@@ -51,9 +38,9 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
     private DateTime _continueAt = DateTime.MinValue;
     private (bool Saved, bool? PreviousState) _yesAlreadyState = (false, null);
 
-    public WorkshopPlugin(DalamudPluginInterface pluginInterface, GameGui gameGui, Framework framework,
-        Condition condition, ClientState clientState, ObjectTable objectTable, DataManager dataManager,
-        CommandManager commandManager)
+    public WorkshopPlugin(DalamudPluginInterface pluginInterface, IGameGui gameGui, IFramework framework,
+        ICondition condition, IClientState clientState, IObjectTable objectTable, IDataManager dataManager,
+        ICommandManager commandManager, IPluginLog pluginLog)
     {
         _pluginInterface = pluginInterface;
         _gameGui = gameGui;
@@ -62,11 +49,12 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
         _clientState = clientState;
         _objectTable = objectTable;
         _commandManager = commandManager;
+        _pluginLog = pluginLog;
 
-        var dalamudReflector = new DalamudReflector(_pluginInterface, _framework);
+        var dalamudReflector = new DalamudReflector(_pluginInterface, _framework, _pluginLog);
         _yesAlreadyIpc = new YesAlreadyIpc(dalamudReflector);
         _configuration = (Configuration?)_pluginInterface.GetPluginConfig() ?? new Configuration();
-        _workshopCache = new WorkshopCache(dataManager);
+        _workshopCache = new WorkshopCache(dataManager, _pluginLog);
 
         _mainWindow = new(this, _pluginInterface, _clientState, _configuration, _workshopCache);
         _windowSystem.AddWindow(_mainWindow);
@@ -74,10 +62,11 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
         _pluginInterface.UiBuilder.Draw += _windowSystem.Draw;
         _pluginInterface.UiBuilder.OpenMainUi += _mainWindow.Toggle;
         _framework.Update += FrameworkUpdate;
-        _commandManager.AddHandler("/ws", new CommandInfo(ProcessCommand));
+        _commandManager.AddHandler("/ws", new CommandInfo(ProcessCommand)
+        {
+            HelpMessage = "Open UI"
+        });
     }
-
-    public string Name => "Workshop Plugin";
 
     internal Stage CurrentStage
     {
@@ -86,13 +75,13 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
         {
             if (_currentStageInternal != value)
             {
-                PluginLog.Information($"Changing stage from {_currentStageInternal} to {value}");
+                _pluginLog.Information($"Changing stage from {_currentStageInternal} to {value}");
                 _currentStageInternal = value;
             }
         }
     }
 
-    private void FrameworkUpdate(Framework framework)
+    private void FrameworkUpdate(IFramework framework)
     {
         if (!_clientState.IsLoggedIn ||
             !_workshopTerritories.Contains(_clientState.TerritoryType) ||
@@ -183,7 +172,7 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
                     break;
 
                 default:
-                    PluginLog.Warning($"Unknown stage {CurrentStage}");
+                    _pluginLog.Warning($"Unknown stage {CurrentStage}");
                     break;
             }
         }
@@ -210,19 +199,19 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
     {
         if (_yesAlreadyState.Saved)
         {
-            PluginLog.Information("Not overwriting yesalready state");
+            _pluginLog.Information("Not overwriting yesalready state");
             return;
         }
 
         _yesAlreadyState = (true, _yesAlreadyIpc.DisableIfNecessary());
-        PluginLog.Information($"Previous yesalready state: {_yesAlreadyState.PreviousState}");
+        _pluginLog.Information($"Previous yesalready state: {_yesAlreadyState.PreviousState}");
     }
 
     private void RestoreYesAlready()
     {
         if (_yesAlreadyState.Saved)
         {
-            PluginLog.Information($"Restoring previous yesalready state: {_yesAlreadyState.PreviousState}");
+            _pluginLog.Information($"Restoring previous yesalready state: {_yesAlreadyState.PreviousState}");
             if (_yesAlreadyState.PreviousState == true)
                 _yesAlreadyIpc.Enable();
         }

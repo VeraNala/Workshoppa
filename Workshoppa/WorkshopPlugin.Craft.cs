@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using Dalamud.Logging;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using Workshoppa.GameData;
 using ValueType = FFXIVClientStructs.FFXIV.Component.GUI.ValueType;
@@ -20,19 +19,19 @@ partial class WorkshopPlugin
         }
         else if (SelectSelectString("advance", 0, s => s.StartsWith("Advance to the next phase of production.")))
         {
-            PluginLog.Information("Phase is complete");
+            _pluginLog.Information("Phase is complete");
             CurrentStage = Stage.TargetFabricationStation;
             _continueAt = DateTime.Now.AddSeconds(3);
         }
         else if (SelectSelectString("complete", 0, s => s.StartsWith("Complete the construction of")))
         {
-            PluginLog.Information("Item is almost complete, confirming last cutscene");
+            _pluginLog.Information("Item is almost complete, confirming last cutscene");
             CurrentStage = Stage.TargetFabricationStation;
             _continueAt = DateTime.Now.AddSeconds(3);
         }
         else if (SelectSelectString("collect", 0, s => s == "Collect finished product."))
         {
-            PluginLog.Information("Item is complete");
+            _pluginLog.Information("Item is complete");
             CurrentStage = Stage.ConfirmCollectProduct;
             _continueAt = DateTime.Now.AddSeconds(0.25);
         }
@@ -47,7 +46,7 @@ partial class WorkshopPlugin
         CraftState? craftState = ReadCraftState(addonMaterialDelivery);
         if (craftState == null || craftState.ResultItem == 0)
         {
-            PluginLog.Warning("Could not parse craft state");
+            _pluginLog.Warning("Could not parse craft state");
             _continueAt = DateTime.Now.AddSeconds(1);
             return;
         }
@@ -60,12 +59,12 @@ partial class WorkshopPlugin
 
             if (!HasItemInSingleSlot(item.ItemId, item.ItemCountPerStep))
             {
-                PluginLog.Error($"Can't contribute item {item.ItemId} to craft, couldn't find {item.ItemCountPerStep}x in a single inventory slot");
+                _pluginLog.Error($"Can't contribute item {item.ItemId} to craft, couldn't find {item.ItemCountPerStep}x in a single inventory slot");
                 CurrentStage = Stage.RequestStop;
                 break;
             }
 
-            PluginLog.Information($"Contributing {item.ItemCountPerStep}x {item.ItemName}");
+            _pluginLog.Information($"Contributing {item.ItemCountPerStep}x {item.ItemName}");
             _contributingItemId = item.ItemId;
             var contributeMaterial = stackalloc AtkValue[]
             {
@@ -90,8 +89,16 @@ partial class WorkshopPlugin
         CraftState? craftState = ReadCraftState(addonMaterialDelivery);
         if (craftState == null || craftState.ResultItem == 0)
         {
-            PluginLog.Warning("Could not parse craft state");
+            _pluginLog.Warning("Could not parse craft state");
             _continueAt = DateTime.Now.AddSeconds(1);
+            return;
+        }
+
+        if (SelectSelectYesno(0, s => s == "Do you really want to trade a high-quality item?"))
+        {
+            _pluginLog.Information("Confirming HQ item turn in");
+            CurrentStage = Stage.ConfirmMaterialDelivery;
+            _continueAt = DateTime.Now.AddSeconds(0.1);
             return;
         }
 
@@ -112,7 +119,7 @@ partial class WorkshopPlugin
         }
         else if (DateTime.Now > _continueAt.AddSeconds(20))
         {
-            PluginLog.Warning("No confirmation dialog, falling back to previous stage");
+            _pluginLog.Warning("No confirmation dialog, falling back to previous stage");
             CurrentStage = Stage.ContributeMaterials;
         }
     }

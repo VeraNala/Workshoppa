@@ -2,15 +2,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Dalamud.Data;
-using Dalamud.Logging;
+using Dalamud.Plugin.Services;
 using Lumina.Excel.GeneratedSheets;
 
 namespace Workshoppa.GameData;
 
 internal sealed class WorkshopCache
 {
-    public WorkshopCache(DataManager dataManager)
+    public WorkshopCache(IDataManager dataManager, IPluginLog pluginLog)
     {
         Task.Run(() =>
         {
@@ -57,7 +56,7 @@ internal sealed class WorkshopCache
             }
             catch (Exception e)
             {
-                PluginLog.Error(e, "Unable to load cached items");
+                pluginLog.Error(e, "Unable to load cached items");
             }
         });
     }

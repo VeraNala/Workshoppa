@@ -1,7 +1,7 @@
 ﻿{
-  "Name": "Workshop Turn-In",
+  "Name": "Workshoppa",
   "Author": "Liza Carvelli",
-  "Punchline": "",
-  "Description": "",
+  "Punchline": "Better Company Workshop Turn-In",
+  "Description": "Requires Pandora's Box (or a similar plugin) with 'Auto-select Turn-ins' enabled",
   "RepoUrl": "https://git.carvel.li/liza/Workshoppa"
 }

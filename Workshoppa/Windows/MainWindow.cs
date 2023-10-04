@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Linq;
 using System.Numerics;
-using Dalamud.Game.ClientState;
 using Dalamud.Interface;
+using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
+using Dalamud.Plugin.Services;
+using FFXIVClientStructs.FFXIV.Client.Game;
 using ImGuiNET;
 using Workshoppa.GameData;
 
@@ -15,13 +17,13 @@ internal sealed class MainWindow : Window
 {
     private readonly WorkshopPlugin _plugin;
     private readonly DalamudPluginInterface _pluginInterface;
-    private readonly ClientState _clientState;
+    private readonly IClientState _clientState;
     private readonly Configuration _configuration;
     private readonly WorkshopCache _workshopCache;
 
     private string _searchString = string.Empty;
 
-    public MainWindow(WorkshopPlugin plugin, DalamudPluginInterface pluginInterface, ClientState clientState, Configuration configuration, WorkshopCache workshopCache)
+    public MainWindow(WorkshopPlugin plugin, DalamudPluginInterface pluginInterface, IClientState clientState, Configuration configuration, WorkshopCache workshopCache)
         : base("Workshoppa###WorkshoppaMainWindow")
     {
         _plugin = plugin;
@@ -56,9 +58,13 @@ internal sealed class MainWindow : Window
             var currentCraft = _workshopCache.Crafts.Single(x => x.WorkshopItemId == currentItem.WorkshopItemId);
             ImGui.Text($"Currently Crafting: {currentCraft.Name}");
 
-            ImGui.BeginDisabled(!NearFabricationStation);
             if (_plugin.CurrentStage == Stage.Stopped)
             {
+                if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Search, "Check Material"))
+                    ImGui.OpenPopup(nameof(CheckMaterial));
+
+                ImGui.SameLine();
+                ImGui.BeginDisabled(!NearFabricationStation);
                 ImGui.BeginDisabled(!IsDiscipleOfHand);
                 if (currentItem.StartedCrafting)
                 {
@@ -85,6 +91,10 @@ internal sealed class MainWindow : Window
                 if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled) && !ImGui.GetIO().KeyCtrl)
                     ImGui.SetTooltip(
                         $"Hold CTRL to remove this as craft. You have to manually use the fabrication station to cancel or finish this craft before you can continue using the queue.");
+                ImGui.EndDisabled();
+
+                if (!IsDiscipleOfHand)
+                    ImGui.TextColored(ImGuiColors.DalamudRed, "You need to be a Disciple of the Hand to start crafting.");
             }
             else
             {
@@ -94,16 +104,28 @@ internal sealed class MainWindow : Window
 
                 ImGui.EndDisabled();
             }
-            ImGui.EndDisabled();
         }
         else
         {
             ImGui.Text("Currently Crafting: ---");
 
+            if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Search, "Check Material"))
+                ImGui.OpenPopup(nameof(CheckMaterial));
+
+            ImGui.SameLine();
             ImGui.BeginDisabled(!NearFabricationStation || _configuration.ItemQueue.Sum(x => x.Quantity) == 0 || _plugin.CurrentStage != Stage.Stopped || !IsDiscipleOfHand);
             if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Play, "Start Crafting"))
                 State = ButtonState.Start;
             ImGui.EndDisabled();
+
+            if (!IsDiscipleOfHand)
+                ImGui.TextColored(ImGuiColors.DalamudRed, "You need to be a Disciple of the Hand to start crafting.");
+        }
+
+        if (ImGui.BeginPopup(nameof(CheckMaterial)))
+        {
+            CheckMaterial();
+            ImGui.EndPopup();
         }
 
         ImGui.Separator();
@@ -174,6 +196,36 @@ internal sealed class MainWindow : Window
     private void Save()
     {
         _pluginInterface.SavePluginConfig(_configuration);
+    }
+
+    private unsafe void CheckMaterial()
+    {
+        if (_configuration.CurrentlyCraftedItem != null)
+            ImGui.Text("Items needed for all crafts in queue (not including current in-progress craft):");
+        else
+            ImGui.Text("Items needed for all crafts in queue:");
+
+        var items = _configuration.ItemQueue
+            .SelectMany(x =>
+                Enumerable.Range(0, x.Quantity).Select(_ =>
+                    _workshopCache.Crafts.Single(y => y.WorkshopItemId == x.WorkshopItemId)))
+            .SelectMany(x => x.Phases)
+            .SelectMany(x => x.Items)
+            .GroupBy(x => new { x.Name, x.ItemId })
+            .OrderBy(x => x.Key.Name);
+
+        ImGui.Indent(20);
+        InventoryManager* inventoryManager = InventoryManager.Instance();
+        foreach (var item in items)
+        {
+            int inInventory = inventoryManager->GetInventoryItemCount(item.Key.ItemId, true, false, false) +
+                              inventoryManager->GetInventoryItemCount(item.Key.ItemId, false, false, false);
+            int required = item.Sum(x => x.TotalQuantity);
+            ImGui.TextColored(inInventory >= required ? ImGuiColors.HealerGreen : ImGuiColors.DalamudRed,
+                $"{item.Key.Name} ({inInventory} / {required})");
+        }
+
+        ImGui.Unindent(20);
     }
 
     public enum ButtonState

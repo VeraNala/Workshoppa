@@ -1,5 +1,4 @@
 ﻿using System.Reflection;
-using Dalamud.Logging;
 
 namespace Workshoppa.External;
 

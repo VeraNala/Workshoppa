@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using Dalamud.Game.ClientState.Objects.Types;
-using Dalamud.Logging;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using ValueType = FFXIVClientStructs.FFXIV.Component.GUI.ValueType;
 
@@ -61,7 +60,7 @@ partial class WorkshopPlugin
             return;
 
         var craft = GetCurrentCraft();
-        PluginLog.Information($"Selecting category {craft.Category} and type {craft.Type}");
+        _pluginLog.Information($"Selecting category {craft.Category} and type {craft.Type}");
         var selectCategory = stackalloc AtkValue[]
         {
             new() { Type = ValueType.Int, Int = 2 },
@@ -98,12 +97,12 @@ partial class WorkshopPlugin
 
         if (visibleItems.All(x => x.WorkshopItemId != craft.WorkshopItemId))
         {
-            PluginLog.Error($"Could not find {craft.Name} in current list, is it unlocked?");
+            _pluginLog.Error($"Could not find {craft.Name} in current list, is it unlocked?");
             CurrentStage = Stage.RequestStop;
             return;
         }
 
-        PluginLog.Information($"Selecting craft {craft.WorkshopItemId}");
+        _pluginLog.Information($"Selecting craft {craft.WorkshopItemId}");
         var selectCraft = stackalloc AtkValue[]
         {
             new() { Type = ValueType.Int, Int = 1 },
