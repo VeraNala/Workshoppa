@@ -10,6 +10,41 @@ partial class WorkshopPlugin
 {
     private uint? _contributingItemId;
 
+    /// <summary>
+    /// Check if delivery window is open when we clicked resume.
+    /// </summary>
+    private unsafe bool CheckContinueWithDelivery()
+    {
+        if (_configuration.CurrentlyCraftedItem != null)
+        {
+            AtkUnitBase* addonMaterialDelivery = GetMaterialDeliveryAddon();
+            if (addonMaterialDelivery == null)
+                return false;
+
+            _pluginLog.Warning("Material delivery window is open, although unexpected... checking current craft");
+            CraftState? craftState = ReadCraftState(addonMaterialDelivery);
+            if (craftState == null || craftState.ResultItem == 0)
+            {
+                _pluginLog.Error("Unable to read craft state");
+                _continueAt = DateTime.Now.AddSeconds(1);
+                return false;
+            }
+
+            var craft = _workshopCache.Crafts.SingleOrDefault(x => x.ResultItem == craftState.ResultItem);
+            if (craft == null || craft.WorkshopItemId != _configuration.CurrentlyCraftedItem.WorkshopItemId)
+            {
+                _pluginLog.Error("Unable to match currently crafted item with game state");
+                _continueAt = DateTime.Now.AddSeconds(1);
+                return false;
+            }
+
+            _pluginLog.Information("Delivering materials for current active craft, switching to delivery");
+            return true;
+        }
+
+        return false;
+    }
+
     private void SelectCraftBranch()
     {
         if (SelectSelectString("contrib", 0, s => s.StartsWith("Contribute materials.")))
@@ -20,6 +55,11 @@ partial class WorkshopPlugin
         else if (SelectSelectString("advance", 0, s => s.StartsWith("Advance to the next phase of production.")))
         {
             _pluginLog.Information("Phase is complete");
+
+            _configuration.CurrentlyCraftedItem!.PhasesComplete++;
+            _configuration.CurrentlyCraftedItem!.ContributedItemsInCurrentPhase = new();
+            _pluginInterface.SavePluginConfig(_configuration);
+
             CurrentStage = Stage.TargetFabricationStation;
             _continueAt = DateTime.Now.AddSeconds(3);
         }
@@ -51,6 +91,12 @@ partial class WorkshopPlugin
             return;
         }
 
+        if (_configuration.CurrentlyCraftedItem!.UpdateFromCraftState(craftState))
+        {
+            _pluginLog.Information("Saving updated current craft information");
+            _pluginInterface.SavePluginConfig(_configuration);
+        }
+
         for (int i = 0; i < craftState.Items.Count; ++i)
         {
             var item = craftState.Items[i];
@@ -59,7 +105,8 @@ partial class WorkshopPlugin
 
             if (!HasItemInSingleSlot(item.ItemId, item.ItemCountPerStep))
             {
-                _pluginLog.Error($"Can't contribute item {item.ItemId} to craft, couldn't find {item.ItemCountPerStep}x in a single inventory slot");
+                _pluginLog.Error(
+                    $"Can't contribute item {item.ItemId} to craft, couldn't find {item.ItemCountPerStep}x in a single inventory slot");
                 CurrentStage = Stage.RequestStop;
                 break;
             }
@@ -113,6 +160,11 @@ partial class WorkshopPlugin
             }
             else
             {
+                _configuration.CurrentlyCraftedItem!.ContributedItemsInCurrentPhase
+                    .Single(x => x.ItemId == item.ItemId)
+                    .QuantityComplete = item.QuantityComplete;
+                _pluginInterface.SavePluginConfig(_configuration);
+
                 CurrentStage = Stage.ContributeMaterials;
                 _continueAt = DateTime.Now.AddSeconds(1);
             }

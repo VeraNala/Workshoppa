@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using Dalamud.Interface;
@@ -44,7 +45,7 @@ internal sealed class MainWindow : Window
         Flags = ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse;
     }
 
-    public bool NearFabricationStation { get; set; } = false;
+    public bool NearFabricationStation { get; set; }
     public ButtonState State { get; set; } = ButtonState.None;
 
     public bool IsDiscipleOfHand =>
@@ -60,7 +61,7 @@ internal sealed class MainWindow : Window
 
             if (_plugin.CurrentStage == Stage.Stopped)
             {
-                if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Search, "Check Material"))
+                if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Search, "Check Inventory"))
                     ImGui.OpenPopup(nameof(CheckMaterial));
 
                 ImGui.SameLine();
@@ -109,7 +110,7 @@ internal sealed class MainWindow : Window
         {
             ImGui.Text("Currently Crafting: ---");
 
-            if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Search, "Check Material"))
+            if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Search, "Check Inventory"))
                 ImGui.OpenPopup(nameof(CheckMaterial));
 
             ImGui.SameLine();
@@ -200,32 +201,65 @@ internal sealed class MainWindow : Window
 
     private unsafe void CheckMaterial()
     {
-        if (_configuration.CurrentlyCraftedItem != null)
-            ImGui.Text("Items needed for all crafts in queue (not including current in-progress craft):");
-        else
-            ImGui.Text("Items needed for all crafts in queue:");
+        ImGui.Text("Items needed for all crafts in queue:");
 
-        var items = _configuration.ItemQueue
-            .SelectMany(x =>
-                Enumerable.Range(0, x.Quantity).Select(_ =>
-                    _workshopCache.Crafts.Single(y => y.WorkshopItemId == x.WorkshopItemId)))
+        List<uint> workshopItemIds = _configuration.ItemQueue
+            .SelectMany(x => Enumerable.Range(0, x.Quantity).Select(_ => x.WorkshopItemId))
+            .ToList();
+        Dictionary<uint, int> completedForCurrentCraft = new();
+        var currentItem = _configuration.CurrentlyCraftedItem;
+        if (currentItem != null)
+        {
+            workshopItemIds.Add(currentItem.WorkshopItemId);
+
+            var craft = _workshopCache.Crafts.Single(x =>
+                x.WorkshopItemId == currentItem.WorkshopItemId);
+            for (int i = 0; i < currentItem.PhasesComplete; ++i)
+            {
+                foreach (var item in craft.Phases[i].Items)
+                    AddMaterial(completedForCurrentCraft, item.ItemId, item.TotalQuantity);
+            }
+
+            if (currentItem.PhasesComplete < craft.Phases.Count)
+            {
+                foreach (var item in currentItem.ContributedItemsInCurrentPhase)
+                    AddMaterial(completedForCurrentCraft, item.ItemId, (int)item.QuantityComplete);
+            }
+        }
+
+        var items = workshopItemIds.Select(x => _workshopCache.Crafts.Single(y => y.WorkshopItemId == x))
             .SelectMany(x => x.Phases)
             .SelectMany(x => x.Items)
             .GroupBy(x => new { x.Name, x.ItemId })
-            .OrderBy(x => x.Key.Name);
+            .OrderBy(x => x.Key.Name)
+            .Select(x => new
+            {
+                x.Key.ItemId,
+                x.Key.Name,
+                TotalQuantity = completedForCurrentCraft.TryGetValue(x.Key.ItemId, out var completed)
+                    ? x.Sum(y => y.TotalQuantity) - completed
+                    : x.Sum(y => y.TotalQuantity),
+            });
 
         ImGui.Indent(20);
         InventoryManager* inventoryManager = InventoryManager.Instance();
         foreach (var item in items)
         {
-            int inInventory = inventoryManager->GetInventoryItemCount(item.Key.ItemId, true, false, false) +
-                              inventoryManager->GetInventoryItemCount(item.Key.ItemId, false, false, false);
-            int required = item.Sum(x => x.TotalQuantity);
-            ImGui.TextColored(inInventory >= required ? ImGuiColors.HealerGreen : ImGuiColors.DalamudRed,
-                $"{item.Key.Name} ({inInventory} / {required})");
+            int inInventory = inventoryManager->GetInventoryItemCount(item.ItemId, true, false, false) +
+                              inventoryManager->GetInventoryItemCount(item.ItemId, false, false, false);
+            ImGui.TextColored(inInventory >= item.TotalQuantity ? ImGuiColors.HealerGreen : ImGuiColors.DalamudRed,
+                $"{item.Name} ({inInventory} / {item.TotalQuantity})");
         }
 
         ImGui.Unindent(20);
+    }
+
+    private void AddMaterial(Dictionary<uint, int> completedForCurrentCraft, uint itemId, int quantity)
+    {
+        if (completedForCurrentCraft.TryGetValue(itemId, out var existingQuantity))
+            completedForCurrentCraft[itemId] = quantity + existingQuantity;
+        else
+            completedForCurrentCraft[itemId] = quantity;
     }
 
     public enum ButtonState

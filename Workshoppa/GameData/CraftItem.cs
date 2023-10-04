@@ -14,4 +14,6 @@ public class CraftItem
     public uint StepsTotal { get; set; }
     public bool Finished { get; set; }
     public uint CrafterMinimumLevel { get; set; }
+
+    public uint QuantityComplete => StepsComplete * ItemCountPerStep;
 }

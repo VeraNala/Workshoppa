@@ -107,6 +107,7 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
             }
             else if (_mainWindow.State is MainWindow.ButtonState.Start or MainWindow.ButtonState.Resume && CurrentStage == Stage.Stopped)
             {
+                // TODO Error checking, we should ensure the player has the required job level for *all* crafting parts
                 _mainWindow.State = MainWindow.ButtonState.None;
                 CurrentStage = Stage.TakeItemFromQueue;
             }
@@ -117,7 +118,10 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
             switch (CurrentStage)
             {
                 case Stage.TakeItemFromQueue:
-                    TakeItemFromQueue();
+                    if (CheckContinueWithDelivery())
+                        CurrentStage = Stage.ContributeMaterials;
+                    else
+                        TakeItemFromQueue();
                     break;
 
                 case Stage.TargetFabricationStation:
