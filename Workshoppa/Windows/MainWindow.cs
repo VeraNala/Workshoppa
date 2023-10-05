@@ -94,8 +94,7 @@ internal sealed class MainWindow : Window
                         $"Hold CTRL to remove this as craft. You have to manually use the fabrication station to cancel or finish this craft before you can continue using the queue.");
                 ImGui.EndDisabled();
 
-                if (!IsDiscipleOfHand)
-                    ImGui.TextColored(ImGuiColors.DalamudRed, "You need to be a Disciple of the Hand to start crafting.");
+                ShowErrorConditions();
             }
             else
             {
@@ -119,8 +118,7 @@ internal sealed class MainWindow : Window
                 State = ButtonState.Start;
             ImGui.EndDisabled();
 
-            if (!IsDiscipleOfHand)
-                ImGui.TextColored(ImGuiColors.DalamudRed, "You need to be a Disciple of the Hand to start crafting.");
+            ShowErrorConditions();
         }
 
         if (ImGui.BeginPopup(nameof(CheckMaterial)))
@@ -260,6 +258,18 @@ internal sealed class MainWindow : Window
             completedForCurrentCraft[itemId] = quantity + existingQuantity;
         else
             completedForCurrentCraft[itemId] = quantity;
+    }
+
+    private void ShowErrorConditions()
+    {
+
+        if (!_plugin.WorkshopTerritories.Contains(_clientState.TerritoryType))
+            ImGui.TextColored(ImGuiColors.DalamudRed, "You are not in the Company Workshop.");
+        else if (!NearFabricationStation)
+            ImGui.TextColored(ImGuiColors.DalamudRed, "You are not near a Farbrication Station.");
+
+        if (!IsDiscipleOfHand)
+            ImGui.TextColored(ImGuiColors.DalamudRed, "You need to be a Disciple of the Hand to start crafting.");
     }
 
     public enum ButtonState

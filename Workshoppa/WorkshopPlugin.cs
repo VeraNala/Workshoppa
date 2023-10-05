@@ -16,8 +16,8 @@ namespace Workshoppa;
 [SuppressMessage("ReSharper", "UnusedType.Global")]
 public sealed partial class WorkshopPlugin : IDalamudPlugin
 {
-    private const int FabricationStationId = 0x1E98F4;
-    private readonly IReadOnlyList<ushort> _workshopTerritories = new ushort[] { 423, 424, 425, 653, 984 }.AsReadOnly();
+    private readonly IReadOnlyList<uint> FabricationStationIds = new uint[] { 2005236, 2005238, 2005240, 2007821, 2011588 }.AsReadOnly();
+    internal readonly IReadOnlyList<ushort> WorkshopTerritories = new ushort[] { 423, 424, 425, 653, 984 }.AsReadOnly();
     private readonly WindowSystem _windowSystem = new WindowSystem(nameof(WorkshopPlugin));
 
     private readonly DalamudPluginInterface _pluginInterface;
@@ -84,9 +84,9 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
     private void FrameworkUpdate(IFramework framework)
     {
         if (!_clientState.IsLoggedIn ||
-            !_workshopTerritories.Contains(_clientState.TerritoryType) ||
+            !WorkshopTerritories.Contains(_clientState.TerritoryType) ||
             _condition[ConditionFlag.BoundByDuty] ||
-            GetDistanceToEventObject(FabricationStationId, out var fabricationStation) >= 5f)
+            GetDistanceToEventObject(FabricationStationIds, out var fabricationStation) >= 5f)
         {
             _mainWindow.NearFabricationStation = false;
         }

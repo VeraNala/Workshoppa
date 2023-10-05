@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using System.Runtime.InteropServices;
 using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Memory;
@@ -30,13 +29,13 @@ partial class WorkshopPlugin
             (FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)obj.Address, false);
     }
 
-    private float GetDistanceToEventObject(int npcId, out GameObject? o)
+    private float GetDistanceToEventObject(IReadOnlyList<uint> npcIds, out GameObject? o)
     {
         foreach (var obj in _objectTable)
         {
             if (obj.ObjectKind == ObjectKind.EventObj)
             {
-                if (GetNpcId(obj) == npcId)
+                if (npcIds.Contains(GetNpcId(obj)))
                 {
                     o = obj;
                     return Vector3.Distance(_clientState.LocalPlayer!.Position, obj.Position);
@@ -48,9 +47,9 @@ partial class WorkshopPlugin
         return float.MaxValue;
     }
 
-    private int GetNpcId(GameObject obj)
+    private unsafe uint GetNpcId(GameObject obj)
     {
-        return Marshal.ReadInt32(obj.Address + 128);
+        return ((FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)obj.Address)->GetNpcID();
     }
 
     private unsafe bool TryGetAddonByName<T>(string addonName, out T* addonPtr)
