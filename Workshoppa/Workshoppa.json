@@ -3,5 +3,6 @@
   "Author": "Liza Carvelli",
   "Punchline": "Better Company Workshop Turn-In",
   "Description": "Requires Pandora's Box (or a similar plugin) with 'Auto-select Turn-ins' enabled",
-  "RepoUrl": "https://git.carvel.li/liza/Workshoppa"
+  "RepoUrl": "https://git.carvel.li/liza/Workshoppa",
+  "IconUrl": "https://git.carvel.li/liza/plugin-repo/raw/branch/master/dist/Workshoppa.png"
 }
