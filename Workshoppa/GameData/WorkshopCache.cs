@@ -61,12 +61,5 @@ internal sealed class WorkshopCache
         });
     }
 
-    /*
-    /waitaddon "CompanyCraftRecipeNoteBook" <maxwait.30>
-    /pcall CompanyCraftRecipeNoteBook false 2 0 1u 16u 548u 1505u 715u 0
-    /wait 0.3
-    /pcall CompanyCraftRecipeNoteBook false 1 0 0 0 548u 0 0 0
-     */
-
     public IReadOnlyList<WorkshopCraft> Crafts { get; private set; } = new List<WorkshopCraft>();
 }
