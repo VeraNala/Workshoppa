@@ -46,6 +46,7 @@ internal sealed class MainWindow : Window
         Flags = ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse;
     }
 
+    public EOpenReason OpenReason { get; set; } = EOpenReason.None;
     public bool NearFabricationStation { get; set; }
     public ButtonState State { get; set; } = ButtonState.None;
 
@@ -200,6 +201,22 @@ internal sealed class MainWindow : Window
         _pluginInterface.SavePluginConfig(_configuration);
     }
 
+    public void Toggle(EOpenReason reason)
+    {
+        if (!IsOpen)
+        {
+            IsOpen = true;
+            OpenReason = reason;
+        }
+        else
+            IsOpen = false;
+    }
+
+    public override void OnClose()
+    {
+        OpenReason = EOpenReason.None;
+    }
+
     private unsafe void CheckMaterial()
     {
         ImGui.Text("Items needed for all crafts in queue:");
@@ -282,5 +299,13 @@ internal sealed class MainWindow : Window
         Resume,
         Pause,
         Stop,
+    }
+
+    public enum EOpenReason
+    {
+        None,
+        Command,
+        NearFabricationStation,
+        PluginInstaller,
     }
 }

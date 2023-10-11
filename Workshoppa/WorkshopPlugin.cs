@@ -60,7 +60,7 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
         _windowSystem.AddWindow(_mainWindow);
 
         _pluginInterface.UiBuilder.Draw += _windowSystem.Draw;
-        _pluginInterface.UiBuilder.OpenMainUi += _mainWindow.Toggle;
+        _pluginInterface.UiBuilder.OpenMainUi += OpenMainUi;
         _framework.Update += FrameworkUpdate;
         _commandManager.AddHandler("/ws", new CommandInfo(ProcessCommand)
         {
@@ -86,13 +86,27 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
         if (!_clientState.IsLoggedIn ||
             !WorkshopTerritories.Contains(_clientState.TerritoryType) ||
             _condition[ConditionFlag.BoundByDuty] ||
-            GetDistanceToEventObject(FabricationStationIds, out var fabricationStation) >= 5f)
+            GetDistanceToEventObject(FabricationStationIds, out var fabricationStation) >= 3f)
         {
             _mainWindow.NearFabricationStation = false;
+
+            if (_mainWindow.IsOpen &&
+                _mainWindow.OpenReason == MainWindow.EOpenReason.NearFabricationStation &&
+                _configuration.CurrentlyCraftedItem == null &&
+                _configuration.ItemQueue.Count == 0)
+            {
+                _mainWindow.IsOpen = false;
+            }
         }
         else if (DateTime.Now >= _continueAt)
         {
             _mainWindow.NearFabricationStation = true;
+
+            if (!_mainWindow.IsOpen)
+            {
+                _mainWindow.IsOpen = true;
+                _mainWindow.OpenReason = MainWindow.EOpenReason.NearFabricationStation;
+            }
 
             if (_mainWindow.State is MainWindow.ButtonState.Pause or MainWindow.ButtonState.Stop)
             {
@@ -187,13 +201,17 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
         return _workshopCache.Crafts.Single(x => x.WorkshopItemId == _configuration.CurrentlyCraftedItem!.WorkshopItemId);
     }
 
-    private void ProcessCommand(string command, string arguments) => _mainWindow.Toggle();
+    private void ProcessCommand(string command, string arguments)
+        => _mainWindow.Toggle(MainWindow.EOpenReason.Command);
+
+    private void OpenMainUi()
+        => _mainWindow.Toggle(MainWindow.EOpenReason.PluginInstaller);
 
     public void Dispose()
     {
         _commandManager.RemoveHandler("/ws");
         _pluginInterface.UiBuilder.Draw -= _windowSystem.Draw;
-        _pluginInterface.UiBuilder.OpenMainUi -= _mainWindow.Toggle;
+        _pluginInterface.UiBuilder.OpenMainUi -= OpenMainUi;
         _framework.Update -= FrameworkUpdate;
 
         RestoreYesAlready();
