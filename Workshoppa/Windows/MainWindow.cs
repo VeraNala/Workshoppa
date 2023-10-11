@@ -10,6 +10,7 @@ using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using ImGuiNET;
+using LLib;
 using Workshoppa.GameData;
 
 namespace Workshoppa.Windows;
@@ -53,6 +54,8 @@ internal sealed class MainWindow : Window
 
     public override void Draw()
     {
+        LImGui.AddPatreonIcon(_pluginInterface);
+
         var currentItem = _configuration.CurrentlyCraftedItem;
         if (currentItem != null)
         {

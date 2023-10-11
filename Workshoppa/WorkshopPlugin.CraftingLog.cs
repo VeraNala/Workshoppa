@@ -2,6 +2,7 @@
 using System.Linq;
 using Dalamud.Game.ClientState.Objects.Types;
 using FFXIVClientStructs.FFXIV.Component.GUI;
+using LLib.GameUI;
 using ValueType = FFXIVClientStructs.FFXIV.Component.GUI.ValueType;
 
 namespace Workshoppa;
@@ -91,7 +92,7 @@ partial class WorkshopPlugin
             .Select(i => new
             {
                 WorkshopItemId = atkValues[14 + 4 * i].UInt,
-                Name = ReadAtkString(atkValues[17 + 4 * i]),
+                Name = atkValues[17 + 4 * i].ReadAtkString(),
             })
             .ToList();
 

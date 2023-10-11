@@ -10,6 +10,7 @@ using FFXIVClientStructs.FFXIV.Client.Game.Control;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
+using LLib.GameUI;
 using Workshoppa.GameData;
 
 namespace Workshoppa;
@@ -52,30 +53,10 @@ partial class WorkshopPlugin
         return ((FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)obj.Address)->GetNpcID();
     }
 
-    private unsafe bool TryGetAddonByName<T>(string addonName, out T* addonPtr)
-        where T : unmanaged
-    {
-        var a = _gameGui.GetAddonByName(addonName);
-        if (a != IntPtr.Zero)
-        {
-            addonPtr = (T*)a;
-            return true;
-        }
-        else
-        {
-            addonPtr = null;
-            return false;
-        }
-    }
-
-    private unsafe bool IsAddonReady(AtkUnitBase* addon)
-    {
-        return addon->IsVisible && addon->UldManager.LoadedState == AtkLoadState.Loaded;
-    }
 
     private unsafe AtkUnitBase* GetCompanyCraftingLogAddon()
     {
-        if (TryGetAddonByName<AtkUnitBase>("CompanyCraftRecipeNoteBook", out var addon) && IsAddonReady(addon))
+        if (_gameGui.TryGetAddonByName<AtkUnitBase>("CompanyCraftRecipeNoteBook", out var addon) && LAddon.IsAddonReady(addon))
             return addon;
 
         return null;
@@ -94,26 +75,9 @@ partial class WorkshopPlugin
             if (addonId == 0)
                 return null;
 
-            AtkUnitBase* addon = GetAddonById(addonId);
-            if (IsAddonReady(addon))
+            AtkUnitBase* addon = LAddon.GetAddonById(addonId);
+            if (LAddon.IsAddonReady(addon))
                 return addon;
-        }
-
-        return null;
-    }
-
-    private unsafe AtkUnitBase* GetAddonById(uint id)
-    {
-        var unitManagers = &AtkStage.GetSingleton()->RaptureAtkUnitManager->AtkUnitManager.DepthLayerOneList;
-        for (var i = 0; i < 18; i++)
-        {
-            foreach (AtkUnitBase* unitBase in unitManagers[i].EntriesSpan)
-            {
-                if (unitBase != null && unitBase->ID == id)
-                {
-                    return unitBase;
-                }
-            }
         }
 
         return null;
@@ -121,8 +85,8 @@ partial class WorkshopPlugin
 
     private unsafe bool SelectSelectString(string marker, int choice, Predicate<string> predicate)
     {
-        if (TryGetAddonByName<AddonSelectString>("SelectString", out var addonSelectString) &&
-            IsAddonReady(&addonSelectString->AtkUnitBase))
+        if (_gameGui.TryGetAddonByName<AddonSelectString>("SelectString", out var addonSelectString) &&
+            LAddon.IsAddonReady(&addonSelectString->AtkUnitBase))
         {
             int entries = addonSelectString->PopupMenu.PopupMenu.EntryCount;
             if (entries < choice)
@@ -146,8 +110,8 @@ partial class WorkshopPlugin
 
     private unsafe bool SelectSelectYesno(int choice, Predicate<string> predicate)
     {
-        if (TryGetAddonByName<AddonSelectYesno>("SelectYesno", out var addonSelectYesno) &&
-            IsAddonReady(&addonSelectYesno->AtkUnitBase))
+        if (_gameGui.TryGetAddonByName<AddonSelectYesno>("SelectYesno", out var addonSelectYesno) &&
+            LAddon.IsAddonReady(&addonSelectYesno->AtkUnitBase))
         {
             var text = MemoryHelper.ReadSeString(&addonSelectYesno->PromptText->NodeText).ToString();
             text = text.Replace("\n", "").Replace("\r", "");
@@ -166,13 +130,6 @@ partial class WorkshopPlugin
         return false;
     }
 
-    private unsafe string? ReadAtkString(AtkValue atkValue)
-    {
-        if (atkValue.String != null)
-            return MemoryHelper.ReadSeStringNullTerminated(new nint(atkValue.String)).ToString();
-        return null;
-    }
-
     private unsafe CraftState? ReadCraftState(AtkUnitBase* addonMaterialDelivery)
     {
         try
@@ -189,7 +146,7 @@ partial class WorkshopPlugin
                     {
                         ItemId = atkValues[12 + i].UInt,
                         IconId = atkValues[24 + i].UInt,
-                        ItemName = ReadAtkString(atkValues[36 + i]),
+                        ItemName = atkValues[36 + i].ReadAtkString(),
                         CrafterIconId = atkValues[48 + i].Int,
                         ItemCountPerStep = atkValues[60 + i].UInt,
                         ItemCountNQ = atkValues[72 + i].UInt,
@@ -223,7 +180,7 @@ partial class WorkshopPlugin
     {
         // NQ / HQ string
         // I have no clue, but it doesn't seme like the available HQ item count is strored anywhere in the atkvalues??
-        string? s = ReadAtkString(atkValue);
+        string? s = atkValue.ReadAtkString();
         if (s != null)
         {
             var parts = s.Replace("\ue03c", "").Split('/');
