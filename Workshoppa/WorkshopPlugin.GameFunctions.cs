@@ -39,7 +39,7 @@ partial class WorkshopPlugin
                 if (npcIds.Contains(GetNpcId(obj)))
                 {
                     o = obj;
-                    return Vector3.Distance(_clientState.LocalPlayer!.Position, obj.Position + new Vector3(0, -2, 0));
+                    return Vector3.Distance(_clientState.LocalPlayer?.Position ?? Vector3.Zero, obj.Position + new Vector3(0, -2, 0));
                 }
             }
         }
