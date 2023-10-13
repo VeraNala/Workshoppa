@@ -215,4 +215,24 @@ partial class WorkshopPlugin
 
         return false;
     }
+
+    public unsafe bool HasFreeInventorySlot()
+    {
+        var inventoryManger = InventoryManager.Instance();
+        if (inventoryManger == null)
+            return false;
+
+        for (InventoryType t = InventoryType.Inventory1; t <= InventoryType.Inventory4; ++t)
+        {
+            var container = inventoryManger->GetInventoryContainer(t);
+            for (int i = 0; i < container->Size; ++i)
+            {
+                var item = container->GetInventorySlot(i);
+                if (item == null || item->ItemID == 0)
+                    return true;
+            }
+        }
+
+        return false;
+    }
 }

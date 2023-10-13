@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.Command;
 using Dalamud.Interface.Windowing;
@@ -28,11 +29,16 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
     private readonly IObjectTable _objectTable;
     private readonly ICommandManager _commandManager;
     private readonly IPluginLog _pluginLog;
+    private readonly IAddonLifecycle _addonLifecycle;
 
     private readonly Configuration _configuration;
     private readonly YesAlreadyIpc _yesAlreadyIpc;
     private readonly WorkshopCache _workshopCache;
+    private readonly GameStrings _gameStrings;
+
     private readonly MainWindow _mainWindow;
+    private readonly ConfigWindow _configWindow;
+    private readonly RepairKitWindow _repairKitWindow;
 
     private Stage _currentStageInternal = Stage.Stopped;
     private DateTime _continueAt = DateTime.MinValue;
@@ -40,7 +46,7 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
 
     public WorkshopPlugin(DalamudPluginInterface pluginInterface, IGameGui gameGui, IFramework framework,
         ICondition condition, IClientState clientState, IObjectTable objectTable, IDataManager dataManager,
-        ICommandManager commandManager, IPluginLog pluginLog)
+        ICommandManager commandManager, IPluginLog pluginLog, IAddonLifecycle addonLifecycle)
     {
         _pluginInterface = pluginInterface;
         _gameGui = gameGui;
@@ -50,22 +56,31 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
         _objectTable = objectTable;
         _commandManager = commandManager;
         _pluginLog = pluginLog;
+        _addonLifecycle = addonLifecycle;
 
         var dalamudReflector = new DalamudReflector(_pluginInterface, _framework, _pluginLog);
         _yesAlreadyIpc = new YesAlreadyIpc(dalamudReflector);
         _configuration = (Configuration?)_pluginInterface.GetPluginConfig() ?? new Configuration();
         _workshopCache = new WorkshopCache(dataManager, _pluginLog);
+        _gameStrings = new(dataManager, _pluginLog);
 
         _mainWindow = new(this, _pluginInterface, _clientState, _configuration, _workshopCache);
         _windowSystem.AddWindow(_mainWindow);
+        _configWindow = new(_pluginInterface, _configuration);
+        _windowSystem.AddWindow(_configWindow);
+        _repairKitWindow = new(this, _pluginInterface, _pluginLog, _gameGui, addonLifecycle, _configuration);
+        _windowSystem.AddWindow(_repairKitWindow);
 
         _pluginInterface.UiBuilder.Draw += _windowSystem.Draw;
         _pluginInterface.UiBuilder.OpenMainUi += OpenMainUi;
+        _pluginInterface.UiBuilder.OpenConfigUi += _configWindow.Toggle;
         _framework.Update += FrameworkUpdate;
         _commandManager.AddHandler("/ws", new CommandInfo(ProcessCommand)
         {
             HelpMessage = "Open UI"
         });
+
+        _addonLifecycle.RegisterListener(AddonEvent.PostSetup, "SelectYesno", SelectYesNoPostSetup);
     }
 
     internal Stage CurrentStage
@@ -202,22 +217,31 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
     }
 
     private void ProcessCommand(string command, string arguments)
-        => _mainWindow.Toggle(MainWindow.EOpenReason.Command);
+    {
+        if (arguments is "c" or "config")
+            _configWindow.Toggle();
+        else
+            _mainWindow.Toggle(MainWindow.EOpenReason.Command);
+    }
 
     private void OpenMainUi()
         => _mainWindow.Toggle(MainWindow.EOpenReason.PluginInstaller);
 
     public void Dispose()
     {
+        _addonLifecycle.UnregisterListener(AddonEvent.PostSetup, "SelectYesno", SelectYesNoPostSetup);
         _commandManager.RemoveHandler("/ws");
         _pluginInterface.UiBuilder.Draw -= _windowSystem.Draw;
+        _pluginInterface.UiBuilder.OpenConfigUi -= _configWindow.Toggle;
         _pluginInterface.UiBuilder.OpenMainUi -= OpenMainUi;
         _framework.Update -= FrameworkUpdate;
+
+        _repairKitWindow.Dispose();
 
         RestoreYesAlready();
     }
 
-    private void SaveYesAlready()
+    public void SaveYesAlready()
     {
         if (_yesAlreadyState.Saved)
         {
@@ -229,7 +253,7 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
         _pluginLog.Information($"Previous yesalready state: {_yesAlreadyState.PreviousState}");
     }
 
-    private void RestoreYesAlready()
+    public void RestoreYesAlready()
     {
         if (_yesAlreadyState.Saved)
         {
