@@ -101,6 +101,8 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
         if (!_clientState.IsLoggedIn ||
             !WorkshopTerritories.Contains(_clientState.TerritoryType) ||
             _condition[ConditionFlag.BoundByDuty] ||
+            _condition[ConditionFlag.BetweenAreas] ||
+            _condition[ConditionFlag.BetweenAreas51] ||
             GetDistanceToEventObject(FabricationStationIds, out var fabricationStation) >= 3f)
         {
             _mainWindow.NearFabricationStation = false;

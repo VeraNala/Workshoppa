@@ -32,14 +32,20 @@ partial class WorkshopPlugin
 
     private float GetDistanceToEventObject(IReadOnlyList<uint> npcIds, out GameObject? o)
     {
-        foreach (var obj in _objectTable)
+        Vector3? localPlayerPosition = _clientState.LocalPlayer?.Position;
+        if (localPlayerPosition != null)
         {
-            if (obj.ObjectKind == ObjectKind.EventObj)
+            foreach (var obj in _objectTable)
             {
-                if (npcIds.Contains(GetNpcId(obj)))
+                if (obj.ObjectKind == ObjectKind.EventObj)
                 {
-                    o = obj;
-                    return Vector3.Distance(_clientState.LocalPlayer?.Position ?? Vector3.Zero, obj.Position + new Vector3(0, -2, 0));
+                    if (npcIds.Contains(GetNpcId(obj)))
+                    {
+                        o = obj;
+                        float distance = Vector3.Distance(localPlayerPosition.Value, obj.Position + new Vector3(0, -2, 0));
+                        if (distance > 0.01)
+                            return distance;
+                    }
                 }
             }
         }
