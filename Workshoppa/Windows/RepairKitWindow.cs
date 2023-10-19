@@ -15,6 +15,7 @@ using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
 using LLib;
 using LLib.GameUI;
+using Workshoppa.External;
 using ValueType = FFXIVClientStructs.FFXIV.Component.GUI.ValueType;
 
 namespace Workshoppa.Windows;
@@ -29,11 +30,14 @@ internal sealed class RepairKitWindow : Window, IDisposable
     private readonly IGameGui _gameGui;
     private readonly IAddonLifecycle _addonLifecycle;
     private readonly Configuration _configuration;
+    private readonly ExternalPluginHandler _externalPluginHandler;
 
     private ItemForSale? _itemForSale;
     private PurchaseState? _purchaseState;
 
-    public RepairKitWindow(WorkshopPlugin plugin, DalamudPluginInterface pluginInterface, IPluginLog pluginLog, IGameGui gameGui, IAddonLifecycle addonLifecycle, Configuration configuration)
+    public RepairKitWindow(WorkshopPlugin plugin, DalamudPluginInterface pluginInterface, IPluginLog pluginLog,
+        IGameGui gameGui, IAddonLifecycle addonLifecycle, Configuration configuration,
+        ExternalPluginHandler externalPluginHandler)
         : base("Repair Kits###WorkshoppaRepairKitWindow")
     {
         _plugin = plugin;
@@ -42,6 +46,7 @@ internal sealed class RepairKitWindow : Window, IDisposable
         _gameGui = gameGui;
         _addonLifecycle = addonLifecycle;
         _configuration = configuration;
+        _externalPluginHandler = externalPluginHandler;
 
         Position = new Vector2(100, 100);
         PositionCondition = ImGuiCond.Always;
@@ -77,7 +82,7 @@ internal sealed class RepairKitWindow : Window, IDisposable
     private void ShopPreFinalize(AddonEvent type, AddonArgs args)
     {
         _purchaseState = null;
-        _plugin.RestoreYesAlready();
+        _externalPluginHandler.Restore();
 
         IsOpen = false;
     }
@@ -200,7 +205,8 @@ internal sealed class RepairKitWindow : Window, IDisposable
         ImGui.Unindent();
 
         int missingItems = Math.Max(0, darkMatterClusters * 5 - (int)_itemForSale.OwnedItems);
-        ImGui.TextColored(missingItems == 0 ? ImGuiColors.HealerGreen : ImGuiColors.DalamudRed, $"Missing Grade 6 Dark Matter: {missingItems:N0}");
+        ImGui.TextColored(missingItems == 0 ? ImGuiColors.HealerGreen : ImGuiColors.DalamudRed,
+            $"Missing Grade 6 Dark Matter: {missingItems:N0}");
 
         if (_purchaseState != null)
         {
@@ -209,7 +215,7 @@ internal sealed class RepairKitWindow : Window, IDisposable
             if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Times, "Cancel Auto-Buy"))
             {
                 _purchaseState = null;
-                _plugin.RestoreYesAlready();
+                _externalPluginHandler.Restore();
             }
         }
         else
@@ -217,10 +223,11 @@ internal sealed class RepairKitWindow : Window, IDisposable
             int toPurchase = Math.Min(GetMaxItemsToPurchase(), missingItems);
             if (toPurchase > 0)
             {
-                if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.DollarSign, $"Auto-Buy missing Dark Matter for {_itemForSale.Price * toPurchase:N0}{SeIconChar.Gil.ToIconString()}"))
+                if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.DollarSign,
+                        $"Auto-Buy missing Dark Matter for {_itemForSale.Price * toPurchase:N0}{SeIconChar.Gil.ToIconString()}"))
                 {
                     _purchaseState = new((int)_itemForSale.OwnedItems + toPurchase, (int)_itemForSale.OwnedItems);
-                    _plugin.SaveYesAlready();
+                    _externalPluginHandler.Save();
 
                     HandleNextPurchaseStep();
                 }
@@ -237,11 +244,12 @@ internal sealed class RepairKitWindow : Window, IDisposable
         {
             _pluginLog.Warning($"No free inventory slots, can't buy more {_itemForSale.ItemName}");
             _purchaseState = null;
-            _plugin.RestoreYesAlready();
+            _externalPluginHandler.Restore();
         }
         else if (!_purchaseState.IsComplete)
         {
-            if (_purchaseState.NextStep <= DateTime.Now && _gameGui.TryGetAddonByName("Shop", out AtkUnitBase* addonShop))
+            if (_purchaseState.NextStep <= DateTime.Now &&
+                _gameGui.TryGetAddonByName("Shop", out AtkUnitBase* addonShop))
             {
                 int buyNow = Math.Min(_purchaseState.ItemsLeftToBuy, 99);
                 _pluginLog.Information($"Buying {buyNow}x {_itemForSale.ItemName}");
@@ -261,9 +269,10 @@ internal sealed class RepairKitWindow : Window, IDisposable
         }
         else
         {
-            _pluginLog.Information($"Stopping item purchase (desired = {_purchaseState.DesiredItems}, owned = {_purchaseState.OwnedItems})");
+            _pluginLog.Information(
+                $"Stopping item purchase (desired = {_purchaseState.DesiredItems}, owned = {_purchaseState.OwnedItems})");
             _purchaseState = null;
-            _plugin.RestoreYesAlready();
+            _externalPluginHandler.Restore();
         }
     }
 

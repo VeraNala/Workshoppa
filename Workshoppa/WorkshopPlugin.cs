@@ -8,6 +8,7 @@ using Dalamud.Game.Command;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
+using LLib;
 using Workshoppa.External;
 using Workshoppa.GameData;
 using Workshoppa.Windows;
@@ -32,7 +33,7 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
     private readonly IAddonLifecycle _addonLifecycle;
 
     private readonly Configuration _configuration;
-    private readonly YesAlreadyIpc _yesAlreadyIpc;
+    private readonly ExternalPluginHandler _externalPluginHandler;
     private readonly WorkshopCache _workshopCache;
     private readonly GameStrings _gameStrings;
 
@@ -42,7 +43,7 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
 
     private Stage _currentStageInternal = Stage.Stopped;
     private DateTime _continueAt = DateTime.MinValue;
-    private (bool Saved, bool? PreviousState) _yesAlreadyState = (false, null);
+    private DateTime _fallbackAt = DateTime.MaxValue;
 
     public WorkshopPlugin(DalamudPluginInterface pluginInterface, IGameGui gameGui, IFramework framework,
         ICondition condition, IClientState clientState, IObjectTable objectTable, IDataManager dataManager,
@@ -58,8 +59,7 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
         _pluginLog = pluginLog;
         _addonLifecycle = addonLifecycle;
 
-        var dalamudReflector = new DalamudReflector(_pluginInterface, _framework, _pluginLog);
-        _yesAlreadyIpc = new YesAlreadyIpc(dalamudReflector);
+        _externalPluginHandler = new ExternalPluginHandler(_pluginInterface, _framework, _pluginLog);
         _configuration = (Configuration?)_pluginInterface.GetPluginConfig() ?? new Configuration();
         _workshopCache = new WorkshopCache(dataManager, _pluginLog);
         _gameStrings = new(dataManager, _pluginLog);
@@ -68,7 +68,7 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
         _windowSystem.AddWindow(_mainWindow);
         _configWindow = new(_pluginInterface, _configuration);
         _windowSystem.AddWindow(_configWindow);
-        _repairKitWindow = new(this, _pluginInterface, _pluginLog, _gameGui, addonLifecycle, _configuration);
+        _repairKitWindow = new(this, _pluginInterface, _pluginLog, _gameGui, addonLifecycle, _configuration, _externalPluginHandler);
         _windowSystem.AddWindow(_repairKitWindow);
 
         _pluginInterface.UiBuilder.Draw += _windowSystem.Draw;
@@ -80,7 +80,11 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
             HelpMessage = "Open UI"
         });
 
+        _addonLifecycle.RegisterListener(AddonEvent.PostSetup, "SelectString", SelectStringPostSetup);
         _addonLifecycle.RegisterListener(AddonEvent.PostSetup, "SelectYesno", SelectYesNoPostSetup);
+        _addonLifecycle.RegisterListener(AddonEvent.PostSetup, "Request", RequestPostSetup);
+        _addonLifecycle.RegisterListener(AddonEvent.PostRefresh, "Request", RequestPostRefresh);
+        _addonLifecycle.RegisterListener(AddonEvent.PostUpdate, "ContextIconMenu", ContextIconMenuPostReceiveEvent);
     }
 
     internal Stage CurrentStage
@@ -90,7 +94,7 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
         {
             if (_currentStageInternal != value)
             {
-                _pluginLog.Information($"Changing stage from {_currentStageInternal} to {value}");
+                _pluginLog.Debug($"Changing stage from {_currentStageInternal} to {value}");
                 _currentStageInternal = value;
             }
         }
@@ -130,7 +134,7 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
                 _mainWindow.State = MainWindow.ButtonState.None;
                 if (CurrentStage != Stage.Stopped)
                 {
-                    RestoreYesAlready();
+                    _externalPluginHandler.Restore();
                     CurrentStage = Stage.Stopped;
                 }
 
@@ -143,8 +147,8 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
                 CurrentStage = Stage.TakeItemFromQueue;
             }
 
-            if (CurrentStage != Stage.Stopped && CurrentStage != Stage.RequestStop && !_yesAlreadyState.Saved)
-                SaveYesAlready();
+            if (CurrentStage != Stage.Stopped && CurrentStage != Stage.RequestStop && !_externalPluginHandler.Saved)
+                _externalPluginHandler.Save();
 
             switch (CurrentStage)
             {
@@ -156,18 +160,17 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
                     break;
 
                 case Stage.TargetFabricationStation:
-                    if (InteractWithFabricationStation(fabricationStation!))
-                    {
                         if (_configuration.CurrentlyCraftedItem is { StartedCrafting: true })
                             CurrentStage = Stage.SelectCraftBranch;
                         else
                             CurrentStage = Stage.OpenCraftingLog;
-                    }
+
+                        InteractWithFabricationStation(fabricationStation!);
 
                     break;
 
                 case Stage.OpenCraftingLog:
-                    OpenCraftingLog();
+                    // see SelectStringPostSetup
                     break;
 
                 case Stage.SelectCraftCategory:
@@ -183,7 +186,7 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
                     break;
 
                 case Stage.RequestStop:
-                    RestoreYesAlready();
+                    _externalPluginHandler.Restore();
                     CurrentStage = Stage.Stopped;
                     break;
 
@@ -195,12 +198,24 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
                     ContributeMaterials();
                     break;
 
+                case Stage.OpenRequestItemWindow:
+                    // see RequestPostSetup and related
+                    if (DateTime.Now > _fallbackAt)
+                        goto case Stage.ContributeMaterials;
+                    break;
+
+                case Stage.OpenRequestItemSelect:
+                case Stage.ConfirmRequestItemWindow:
+                    // see RequestPostSetup and related
+                    break;
+
+
                 case Stage.ConfirmMaterialDelivery:
-                    ConfirmMaterialDelivery();
+                    // see SelectYesNoPostSetup
                     break;
 
                 case Stage.ConfirmCollectProduct:
-                    ConfirmCollectProduct();
+                    // see SelectStringPostSetup
                     break;
 
                 case Stage.Stopped:
@@ -231,7 +246,11 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
 
     public void Dispose()
     {
+        _addonLifecycle.UnregisterListener(AddonEvent.PostUpdate, "ContextIconMenu", ContextIconMenuPostReceiveEvent);
+        _addonLifecycle.UnregisterListener(AddonEvent.PostRefresh, "Request", RequestPostRefresh);
+        _addonLifecycle.UnregisterListener(AddonEvent.PostSetup, "Request", RequestPostSetup);
         _addonLifecycle.UnregisterListener(AddonEvent.PostSetup, "SelectYesno", SelectYesNoPostSetup);
+        _addonLifecycle.UnregisterListener(AddonEvent.PostSetup, "SelectString", SelectStringPostSetup);
         _commandManager.RemoveHandler("/ws");
         _pluginInterface.UiBuilder.Draw -= _windowSystem.Draw;
         _pluginInterface.UiBuilder.OpenConfigUi -= _configWindow.Toggle;
@@ -240,30 +259,7 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
 
         _repairKitWindow.Dispose();
 
-        RestoreYesAlready();
-    }
-
-    public void SaveYesAlready()
-    {
-        if (_yesAlreadyState.Saved)
-        {
-            _pluginLog.Information("Not overwriting yesalready state");
-            return;
-        }
-
-        _yesAlreadyState = (true, _yesAlreadyIpc.DisableIfNecessary());
-        _pluginLog.Information($"Previous yesalready state: {_yesAlreadyState.PreviousState}");
-    }
-
-    public void RestoreYesAlready()
-    {
-        if (_yesAlreadyState.Saved)
-        {
-            _pluginLog.Information($"Restoring previous yesalready state: {_yesAlreadyState.PreviousState}");
-            if (_yesAlreadyState.PreviousState == true)
-                _yesAlreadyIpc.Enable();
-        }
-
-        _yesAlreadyState = (false, null);
+        _externalPluginHandler.RestoreTextAdvance();
+        _externalPluginHandler.Restore();
     }
 }

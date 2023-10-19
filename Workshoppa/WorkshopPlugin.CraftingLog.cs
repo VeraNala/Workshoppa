@@ -9,11 +9,8 @@ namespace Workshoppa;
 
 partial class WorkshopPlugin
 {
-    private bool InteractWithFabricationStation(GameObject fabricationStation)
-    {
-        InteractWithTarget(fabricationStation);
-        return true;
-    }
+    private void InteractWithFabricationStation(GameObject fabricationStation)
+        => InteractWithTarget(fabricationStation);
 
     private void TakeItemFromQueue()
     {
@@ -46,12 +43,6 @@ partial class WorkshopPlugin
         }
         else
             CurrentStage = Stage.TargetFabricationStation;
-    }
-
-    private void OpenCraftingLog()
-    {
-        if (SelectSelectString("craftlog", 0, s => s == "View company crafting log."))
-            CurrentStage = Stage.SelectCraftCategory;
     }
 
     private unsafe void SelectCraftCategory()

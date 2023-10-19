@@ -30,9 +30,27 @@ partial class WorkshopPlugin
                 _pluginLog.Verbose("Not a purchase confirmation match");
             }
         }
-        else if (_mainWindow.IsOpen)
+        else if (CurrentStage != Stage.Stopped)
         {
-            // TODO
+            if (CurrentStage == Stage.ConfirmMaterialDelivery && _gameStrings.TurnInHighQualityItem == text)
+            {
+                _pluginLog.Information($"Selecting 'yes' ({text})");
+                addonSelectYesNo->AtkUnitBase.FireCallbackInt(0);
+            }
+            else if (CurrentStage == Stage.ConfirmMaterialDelivery && _gameStrings.ContributeItems.IsMatch(text))
+            {
+                _pluginLog.Information($"Selecting 'yes' ({text})");
+                addonSelectYesNo->AtkUnitBase.FireCallbackInt(0);
+
+                ConfirmMaterialDeliveryFollowUp();
+            }
+            else if (CurrentStage == Stage.ConfirmCollectProduct && _gameStrings.RetrieveFinishedItem.IsMatch(text))
+            {
+                _pluginLog.Information($"Selecting 'yes' ({text})");
+                addonSelectYesNo->AtkUnitBase.FireCallbackInt(0);
+
+                ConfirmCollectProductFollowUp();
+            }
         }
     }
 }

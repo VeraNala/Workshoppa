@@ -12,6 +12,9 @@ public enum Stage
 
     SelectCraftBranch,
     ContributeMaterials,
+    OpenRequestItemWindow,
+    OpenRequestItemSelect,
+    ConfirmRequestItemWindow,
     ConfirmMaterialDelivery,
 
     ConfirmCollectProduct,

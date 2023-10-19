@@ -15,6 +15,7 @@ using Workshoppa.GameData;
 
 namespace Workshoppa.Windows;
 
+// FIXME The close button doesn't work near the workshop, either hide it or make it work
 internal sealed class MainWindow : Window
 {
     private readonly WorkshopPlugin _plugin;
@@ -24,6 +25,7 @@ internal sealed class MainWindow : Window
     private readonly WorkshopCache _workshopCache;
 
     private string _searchString = string.Empty;
+    private bool _checkInventory;
 
     public MainWindow(WorkshopPlugin plugin, DalamudPluginInterface pluginInterface, IClientState clientState, Configuration configuration, WorkshopCache workshopCache)
         : base("Workshoppa###WorkshoppaMainWindow")
@@ -66,7 +68,7 @@ internal sealed class MainWindow : Window
             if (_plugin.CurrentStage == Stage.Stopped)
             {
                 if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Search, "Check Inventory"))
-                    ImGui.OpenPopup(nameof(CheckMaterial));
+                    _checkInventory = !_checkInventory;
 
                 ImGui.SameLine();
                 ImGui.BeginDisabled(!NearFabricationStation);
@@ -74,12 +76,18 @@ internal sealed class MainWindow : Window
                 if (currentItem.StartedCrafting)
                 {
                     if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Play, "Resume"))
+                    {
                         State = ButtonState.Resume;
+                        _checkInventory = false;
+                    }
                 }
                 else
                 {
                     if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Play, "Start Crafting"))
+                    {
                         State = ButtonState.Start;
+                        _checkInventory = false;
+                    }
                 }
                 ImGui.EndDisabled();
 
@@ -114,21 +122,25 @@ internal sealed class MainWindow : Window
             ImGui.Text("Currently Crafting: ---");
 
             if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Search, "Check Inventory"))
-                ImGui.OpenPopup(nameof(CheckMaterial));
+                _checkInventory = !_checkInventory;
 
             ImGui.SameLine();
             ImGui.BeginDisabled(!NearFabricationStation || _configuration.ItemQueue.Sum(x => x.Quantity) == 0 || _plugin.CurrentStage != Stage.Stopped || !IsDiscipleOfHand);
             if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Play, "Start Crafting"))
+            {
                 State = ButtonState.Start;
+                _checkInventory = false;
+            }
+
             ImGui.EndDisabled();
 
             ShowErrorConditions();
         }
 
-        if (ImGui.BeginPopup(nameof(CheckMaterial)))
+        if (_checkInventory)
         {
+            ImGui.Separator();
             CheckMaterial();
-            ImGui.EndPopup();
         }
 
         ImGui.Separator();

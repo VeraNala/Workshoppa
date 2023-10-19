@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Linq;
+using Dalamud.Game.Addon.Lifecycle;
+using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
+using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using Workshoppa.GameData;
 using ValueType = FFXIVClientStructs.FFXIV.Component.GUI.ValueType;
@@ -111,6 +114,8 @@ partial class WorkshopPlugin
                 break;
             }
 
+            _externalPluginHandler.SaveTextAdvance();
+
             _pluginLog.Information($"Contributing {item.ItemCountPerStep}x {item.ItemName}");
             _contributingItemId = item.ItemId;
             var contributeMaterial = stackalloc AtkValue[]
@@ -121,13 +126,75 @@ partial class WorkshopPlugin
                 new() { Type = 0, Int = 0 }
             };
             addonMaterialDelivery->FireCallback(4, contributeMaterial);
-            CurrentStage = Stage.ConfirmMaterialDelivery;
-            _continueAt = DateTime.Now.AddSeconds(0.5);
+            _fallbackAt = DateTime.Now.AddSeconds(0.2);
+            CurrentStage = Stage.OpenRequestItemWindow;
             break;
         }
     }
 
-    private unsafe void ConfirmMaterialDelivery()
+    private unsafe void RequestPostSetup(AddonEvent type, AddonArgs addon)
+    {
+        var addonRequest = (AddonRequest*)addon.Addon;
+        _pluginLog.Verbose($"{nameof(RequestPostSetup)}: {CurrentStage}, {addonRequest->EntryCount}");
+        if (CurrentStage != Stage.OpenRequestItemWindow)
+            return;
+
+        if (addonRequest->EntryCount != 1)
+            return;
+
+        _fallbackAt = DateTime.MaxValue;
+        CurrentStage = Stage.OpenRequestItemSelect;
+        var contributeMaterial = stackalloc AtkValue[]
+        {
+            new() { Type = ValueType.Int, Int = 2 },
+            new() { Type = ValueType.UInt, Int = 0 },
+            new() { Type = ValueType.UInt, UInt = 44 },
+            new() { Type = ValueType.UInt, UInt = 0 }
+        };
+        addonRequest->AtkUnitBase.FireCallback(4, contributeMaterial);
+    }
+
+    private unsafe void ContextIconMenuPostReceiveEvent(AddonEvent type, AddonArgs addon)
+    {
+        if (CurrentStage != Stage.OpenRequestItemSelect)
+            return;
+
+        CurrentStage = Stage.ConfirmRequestItemWindow;
+        var selectSlot = stackalloc AtkValue[]
+        {
+            new() { Type = ValueType.Int, Int = 0 },
+            new() { Type = ValueType.Int, Int = 0 /* slot */ },
+            new() { Type = ValueType.UInt, UInt = 20802 /* probably the item's icon */ },
+            new() { Type = ValueType.UInt, UInt = 0 },
+            new() { Type = 0, Int = 0 },
+        };
+        ((AddonContextIconMenu*)addon.Addon)->AtkUnitBase.FireCallback(5, selectSlot);
+    }
+
+    private unsafe void RequestPostRefresh(AddonEvent type, AddonArgs addon)
+    {
+        _pluginLog.Verbose($"{nameof(RequestPostRefresh)}: {CurrentStage}");
+        if (CurrentStage != Stage.ConfirmRequestItemWindow)
+            return;
+
+        var addonRequest = (AddonRequest*)addon.Addon;
+        if (addonRequest->EntryCount != 1)
+            return;
+
+        CurrentStage = Stage.ConfirmMaterialDelivery;
+        var closeWindow = stackalloc AtkValue[]
+        {
+            new() { Type = ValueType.Int, Int = 0 },
+            new() { Type = ValueType.UInt, UInt = 0 },
+            new() { Type = ValueType.UInt, UInt = 0 },
+            new() { Type = ValueType.UInt, UInt = 0 }
+        };
+        addonRequest->AtkUnitBase.FireCallback(4, closeWindow);
+        addonRequest->AtkUnitBase.Close(false);
+        _externalPluginHandler.RestoreTextAdvance();
+    }
+
+    private unsafe void ConfirmMaterialDeliveryFollowUp()
     {
         AtkUnitBase* addonMaterialDelivery = GetMaterialDeliveryAddon();
         if (addonMaterialDelivery == null)
@@ -141,50 +208,22 @@ partial class WorkshopPlugin
             return;
         }
 
-        if (SelectSelectYesno(0, s => s == "Do you really want to trade a high-quality item?"))
+        var item = craftState.Items.Single(x => x.ItemId == _contributingItemId);
+        item.StepsComplete++;
+        if (craftState.IsPhaseComplete())
         {
-            _pluginLog.Information("Confirming HQ item turn in");
-            CurrentStage = Stage.ConfirmMaterialDelivery;
-            _continueAt = DateTime.Now.AddSeconds(0.1);
-            return;
+            CurrentStage = Stage.TargetFabricationStation;
+            _continueAt = DateTime.Now.AddSeconds(0.5);
         }
-
-        if (SelectSelectYesno(0, s => s.StartsWith("Contribute") && s.EndsWith("to the company project?")))
+        else
         {
-            var item = craftState.Items.Single(x => x.ItemId == _contributingItemId);
-            item.StepsComplete++;
-            if (craftState.IsPhaseComplete())
-            {
-                CurrentStage = Stage.TargetFabricationStation;
-                _continueAt = DateTime.Now.AddSeconds(0.5);
-            }
-            else
-            {
-                _configuration.CurrentlyCraftedItem!.ContributedItemsInCurrentPhase
-                    .Single(x => x.ItemId == item.ItemId)
-                    .QuantityComplete = item.QuantityComplete;
-                _pluginInterface.SavePluginConfig(_configuration);
-
-                CurrentStage = Stage.ContributeMaterials;
-                _continueAt = DateTime.Now.AddSeconds(1);
-            }
-        }
-        else if (DateTime.Now > _continueAt.AddSeconds(20))
-        {
-            _pluginLog.Warning("No confirmation dialog, falling back to previous stage");
-            CurrentStage = Stage.ContributeMaterials;
-        }
-    }
-
-    private void ConfirmCollectProduct()
-    {
-        if (SelectSelectYesno(0, s => s.StartsWith("Retrieve")))
-        {
-            _configuration.CurrentlyCraftedItem = null;
+            _configuration.CurrentlyCraftedItem!.ContributedItemsInCurrentPhase
+                .Single(x => x.ItemId == item.ItemId)
+                .QuantityComplete = item.QuantityComplete;
             _pluginInterface.SavePluginConfig(_configuration);
 
-            CurrentStage = Stage.TakeItemFromQueue;
-            _continueAt = DateTime.Now.AddSeconds(0.5);
+            CurrentStage = Stage.ContributeMaterials;
+            _continueAt = DateTime.Now.AddSeconds(1);
         }
     }
 }
