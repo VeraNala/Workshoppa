@@ -45,6 +45,12 @@ partial class WorkshopPlugin
             CurrentStage = Stage.TargetFabricationStation;
     }
 
+    private void OpenCraftingLog()
+    {
+        if (SelectSelectString("craftlog", 0, s => s == _gameStrings.ViewCraftingLog))
+            CurrentStage = Stage.SelectCraftCategory;
+    }
+
     private unsafe void SelectCraftCategory()
     {
         AtkUnitBase* addonCraftingLog = GetCompanyCraftingLogAddon();

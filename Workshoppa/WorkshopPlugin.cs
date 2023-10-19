@@ -80,7 +80,6 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
             HelpMessage = "Open UI"
         });
 
-        _addonLifecycle.RegisterListener(AddonEvent.PostSetup, "SelectString", SelectStringPostSetup);
         _addonLifecycle.RegisterListener(AddonEvent.PostSetup, "SelectYesno", SelectYesNoPostSetup);
         _addonLifecycle.RegisterListener(AddonEvent.PostSetup, "Request", RequestPostSetup);
         _addonLifecycle.RegisterListener(AddonEvent.PostRefresh, "Request", RequestPostRefresh);
@@ -170,7 +169,7 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
                     break;
 
                 case Stage.OpenCraftingLog:
-                    // see SelectStringPostSetup
+                    OpenCraftingLog();
                     break;
 
                 case Stage.SelectCraftCategory:
@@ -215,7 +214,7 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
                     break;
 
                 case Stage.ConfirmCollectProduct:
-                    // see SelectStringPostSetup
+                    // see SelectYesNoPostSetup
                     break;
 
                 case Stage.Stopped:
@@ -250,7 +249,6 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
         _addonLifecycle.UnregisterListener(AddonEvent.PostRefresh, "Request", RequestPostRefresh);
         _addonLifecycle.UnregisterListener(AddonEvent.PostSetup, "Request", RequestPostSetup);
         _addonLifecycle.UnregisterListener(AddonEvent.PostSetup, "SelectYesno", SelectYesNoPostSetup);
-        _addonLifecycle.UnregisterListener(AddonEvent.PostSetup, "SelectString", SelectStringPostSetup);
         _commandManager.RemoveHandler("/ws");
         _pluginInterface.UiBuilder.Draw -= _windowSystem.Draw;
         _pluginInterface.UiBuilder.OpenConfigUi -= _configWindow.Toggle;
