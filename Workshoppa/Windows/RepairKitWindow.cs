@@ -3,6 +3,7 @@ using System.Linq;
 using System.Numerics;
 using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
+using Dalamud.Game.Text;
 using Dalamud.Interface;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
@@ -216,7 +217,7 @@ internal sealed class RepairKitWindow : Window, IDisposable
             int toPurchase = Math.Min(GetMaxItemsToPurchase(), missingItems);
             if (toPurchase > 0)
             {
-                if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.DollarSign, "Auto-Buy missing Dark Matter"))
+                if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.DollarSign, $"Auto-Buy missing Dark Matter for {_itemForSale.Price * toPurchase:N0}{SeIconChar.Gil.ToIconString()}"))
                 {
                     _purchaseState = new((int)_itemForSale.OwnedItems + toPurchase, (int)_itemForSale.OwnedItems);
                     _plugin.SaveYesAlready();
