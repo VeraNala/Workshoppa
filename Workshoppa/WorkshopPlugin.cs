@@ -8,7 +8,6 @@ using Dalamud.Game.Command;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
-using LLib;
 using Workshoppa.External;
 using Workshoppa.GameData;
 using Workshoppa.Windows;
@@ -18,7 +17,7 @@ namespace Workshoppa;
 [SuppressMessage("ReSharper", "UnusedType.Global")]
 public sealed partial class WorkshopPlugin : IDalamudPlugin
 {
-    private readonly IReadOnlyList<uint> FabricationStationIds = new uint[] { 2005236, 2005238, 2005240, 2007821, 2011588 }.AsReadOnly();
+    private readonly IReadOnlyList<uint> _fabricationStationIds = new uint[] { 2005236, 2005238, 2005240, 2007821, 2011588 }.AsReadOnly();
     internal readonly IReadOnlyList<ushort> WorkshopTerritories = new ushort[] { 423, 424, 425, 653, 984 }.AsReadOnly();
     private readonly WindowSystem _windowSystem = new WindowSystem(nameof(WorkshopPlugin));
 
@@ -40,6 +39,7 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
     private readonly MainWindow _mainWindow;
     private readonly ConfigWindow _configWindow;
     private readonly RepairKitWindow _repairKitWindow;
+    private readonly CeruleumTankWindow _ceruleumTankWindow;
 
     private Stage _currentStageInternal = Stage.Stopped;
     private DateTime _continueAt = DateTime.MinValue;
@@ -70,6 +70,9 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
         _windowSystem.AddWindow(_configWindow);
         _repairKitWindow = new(this, _pluginInterface, _pluginLog, _gameGui, addonLifecycle, _configuration, _externalPluginHandler);
         _windowSystem.AddWindow(_repairKitWindow);
+        _ceruleumTankWindow = new(this, _pluginInterface, _pluginLog, _gameGui, addonLifecycle, _configuration,
+            _externalPluginHandler);
+        _windowSystem.AddWindow(_ceruleumTankWindow);
 
         _pluginInterface.UiBuilder.Draw += _windowSystem.Draw;
         _pluginInterface.UiBuilder.OpenMainUi += OpenMainUi;
@@ -106,7 +109,7 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
             _condition[ConditionFlag.BoundByDuty] ||
             _condition[ConditionFlag.BetweenAreas] ||
             _condition[ConditionFlag.BetweenAreas51] ||
-            GetDistanceToEventObject(FabricationStationIds, out var fabricationStation) >= 3f)
+            GetDistanceToEventObject(_fabricationStationIds, out var fabricationStation) >= 3f)
         {
             _mainWindow.NearFabricationStation = false;
 
@@ -255,6 +258,7 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
         _pluginInterface.UiBuilder.OpenMainUi -= OpenMainUi;
         _framework.Update -= FrameworkUpdate;
 
+        _ceruleumTankWindow.Dispose();
         _repairKitWindow.Dispose();
 
         _externalPluginHandler.RestoreTextAdvance();

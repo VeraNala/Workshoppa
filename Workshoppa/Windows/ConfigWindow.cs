@@ -30,5 +30,12 @@ internal sealed class ConfigWindow : Window
             _configuration.EnableRepairKitCalculator = enableRepairKitCalculator;
             _pluginInterface.SavePluginConfig(_configuration);
         }
+
+        bool enableCeruleumTankCalculator = _configuration.EnableCeruleumTankCalculator;
+        if (ImGui.Checkbox("Enable Ceruleum Tank Calculator", ref enableCeruleumTankCalculator))
+        {
+            _configuration.EnableCeruleumTankCalculator = enableCeruleumTankCalculator;
+            _pluginInterface.SavePluginConfig(_configuration);
+        }
     }
 }

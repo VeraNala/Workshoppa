@@ -222,12 +222,15 @@ partial class WorkshopPlugin
         return false;
     }
 
-    public unsafe bool HasFreeInventorySlot()
+    public bool HasFreeInventorySlot() => GetFreeInventorySlots() > 0;
+
+    public unsafe int GetFreeInventorySlots()
     {
         var inventoryManger = InventoryManager.Instance();
         if (inventoryManger == null)
-            return false;
+            return 0;
 
+        int count = 0;
         for (InventoryType t = InventoryType.Inventory1; t <= InventoryType.Inventory4; ++t)
         {
             var container = inventoryManger->GetInventoryContainer(t);
@@ -235,10 +238,10 @@ partial class WorkshopPlugin
             {
                 var item = container->GetInventorySlot(i);
                 if (item == null || item->ItemID == 0)
-                    return true;
+                    ++count;
             }
         }
 
-        return false;
+        return count;
     }
 }

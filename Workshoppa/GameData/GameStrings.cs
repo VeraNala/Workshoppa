@@ -12,8 +12,10 @@ internal sealed class GameStrings
 {
     public GameStrings(IDataManager dataManager, IPluginLog pluginLog)
     {
-        PurchaseItem = dataManager.GetRegex<Addon>(3406, addon => addon.Text, pluginLog)
-                       ?? throw new Exception($"Unable to resolve {nameof(PurchaseItem)}");
+        PurchaseItemForGil = dataManager.GetRegex<Addon>(3406, addon => addon.Text, pluginLog)
+                             ?? throw new Exception($"Unable to resolve {nameof(PurchaseItemForGil)}");
+        PurchaseItemForCompanyCredits = dataManager.GetRegex<Addon>(3473, addon => addon.Text, pluginLog)
+                                        ?? throw new Exception($"Unable to resolve {nameof(PurchaseItemForCompanyCredits)}");
         ViewCraftingLog =
             dataManager.GetString<WorkshopDialogue>("TEXT_CMNDEFCOMPANYMANUFACTORY_00150_MENU_CC_NOTE",
                 pluginLog) ?? throw new Exception($"Unable to resolve {nameof(ViewCraftingLog)}");
@@ -26,7 +28,8 @@ internal sealed class GameStrings
             ?? throw new Exception($"Unable to resolve {nameof(RetrieveFinishedItem)}");
     }
 
-    public Regex PurchaseItem { get; }
+    public Regex PurchaseItemForGil { get; }
+    public Regex PurchaseItemForCompanyCredits { get; }
     public string ViewCraftingLog { get; }
     public string TurnInHighQualityItem { get; }
     public Regex ContributeItems { get; }

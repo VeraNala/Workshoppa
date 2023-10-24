@@ -19,10 +19,24 @@ partial class WorkshopPlugin
         if (_repairKitWindow.IsOpen)
         {
             _pluginLog.Verbose($"Checking for Repair Kit YesNo ({_repairKitWindow.AutoBuyEnabled}, {_repairKitWindow.IsAwaitingYesNo})");
-            if (_repairKitWindow.AutoBuyEnabled && _repairKitWindow.IsAwaitingYesNo && _gameStrings.PurchaseItem.IsMatch(text))
+            if (_repairKitWindow.AutoBuyEnabled && _repairKitWindow.IsAwaitingYesNo && _gameStrings.PurchaseItemForGil.IsMatch(text))
             {
                 _pluginLog.Information($"Selecting 'yes' ({text})");
                 _repairKitWindow.IsAwaitingYesNo = false;
+                addonSelectYesNo->AtkUnitBase.FireCallbackInt(0);
+            }
+            else
+            {
+                _pluginLog.Verbose("Not a purchase confirmation match");
+            }
+        }
+        else if (_ceruleumTankWindow.IsOpen)
+        {
+            _pluginLog.Verbose($"Checking for Ceruleum Tank YesNo ({_ceruleumTankWindow.AutoBuyEnabled}, {_ceruleumTankWindow.IsAwaitingYesNo})");
+            if (_ceruleumTankWindow.AutoBuyEnabled && _ceruleumTankWindow.IsAwaitingYesNo && _gameStrings.PurchaseItemForCompanyCredits.IsMatch(text))
+            {
+                _pluginLog.Information($"Selecting 'yes' ({text})");
+                _ceruleumTankWindow.IsAwaitingYesNo = false;
                 addonSelectYesNo->AtkUnitBase.FireCallbackInt(0);
             }
             else
