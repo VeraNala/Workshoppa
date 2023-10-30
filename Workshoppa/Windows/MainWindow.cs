@@ -27,7 +27,8 @@ internal sealed class MainWindow : Window
     private string _searchString = string.Empty;
     private bool _checkInventory;
 
-    public MainWindow(WorkshopPlugin plugin, DalamudPluginInterface pluginInterface, IClientState clientState, Configuration configuration, WorkshopCache workshopCache)
+    public MainWindow(WorkshopPlugin plugin, DalamudPluginInterface pluginInterface, IClientState clientState,
+        Configuration configuration, WorkshopCache workshopCache)
         : base("Workshoppa###WorkshoppaMainWindow")
     {
         _plugin = plugin;
@@ -42,7 +43,7 @@ internal sealed class MainWindow : Window
         SizeConstraints = new WindowSizeConstraints
         {
             MinimumSize = new Vector2(350, 50),
-            MaximumSize = new Vector2(500, 500),
+            MaximumSize = new Vector2(500, 9999),
         };
 
         Flags = ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse;
@@ -52,7 +53,7 @@ internal sealed class MainWindow : Window
     public bool NearFabricationStation { get; set; }
     public ButtonState State { get; set; } = ButtonState.None;
 
-    public bool IsDiscipleOfHand =>
+    private bool IsDiscipleOfHand =>
         _clientState.LocalPlayer != null && _clientState.LocalPlayer.ClassJob.Id is >= 8 and <= 15;
 
     public override void Draw()
@@ -89,6 +90,7 @@ internal sealed class MainWindow : Window
                         _checkInventory = false;
                     }
                 }
+
                 ImGui.EndDisabled();
 
                 ImGui.SameLine();
@@ -100,6 +102,7 @@ internal sealed class MainWindow : Window
 
                     Save();
                 }
+
                 ImGui.EndDisabled();
                 if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled) && !ImGui.GetIO().KeyCtrl)
                     ImGui.SetTooltip(
@@ -125,7 +128,8 @@ internal sealed class MainWindow : Window
                 _checkInventory = !_checkInventory;
 
             ImGui.SameLine();
-            ImGui.BeginDisabled(!NearFabricationStation || _configuration.ItemQueue.Sum(x => x.Quantity) == 0 || _plugin.CurrentStage != Stage.Stopped || !IsDiscipleOfHand);
+            ImGui.BeginDisabled(!NearFabricationStation || _configuration.ItemQueue.Sum(x => x.Quantity) == 0 ||
+                                _plugin.CurrentStage != Stage.Stopped || !IsDiscipleOfHand);
             if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Play, "Start Crafting"))
             {
                 State = ButtonState.Start;
@@ -147,7 +151,7 @@ internal sealed class MainWindow : Window
         ImGui.Text("Queue:");
         ImGui.BeginDisabled(_plugin.CurrentStage != Stage.Stopped);
         Configuration.QueuedItem? itemToRemove = null;
-        for (int i = 0; i < _configuration.ItemQueue.Count; ++ i)
+        for (int i = 0; i < _configuration.ItemQueue.Count; ++i)
         {
             ImGui.PushID($"ItemQueue{i}");
             var item = _configuration.ItemQueue[i];
@@ -202,6 +206,7 @@ internal sealed class MainWindow : Window
 
             ImGui.EndCombo();
         }
+
         ImGui.EndDisabled();
 
         ImGui.Separator();
@@ -294,7 +299,6 @@ internal sealed class MainWindow : Window
 
     private void ShowErrorConditions()
     {
-
         if (!_plugin.WorkshopTerritories.Contains(_clientState.TerritoryType))
             ImGui.TextColored(ImGuiColors.DalamudRed, "You are not in the Company Workshop.");
         else if (!NearFabricationStation)

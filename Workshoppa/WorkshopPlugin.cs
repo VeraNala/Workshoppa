@@ -30,6 +30,7 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
     private readonly ICommandManager _commandManager;
     private readonly IPluginLog _pluginLog;
     private readonly IAddonLifecycle _addonLifecycle;
+    private readonly IChatGui _chatGui;
 
     private readonly Configuration _configuration;
     private readonly ExternalPluginHandler _externalPluginHandler;
@@ -47,7 +48,7 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
 
     public WorkshopPlugin(DalamudPluginInterface pluginInterface, IGameGui gameGui, IFramework framework,
         ICondition condition, IClientState clientState, IObjectTable objectTable, IDataManager dataManager,
-        ICommandManager commandManager, IPluginLog pluginLog, IAddonLifecycle addonLifecycle)
+        ICommandManager commandManager, IPluginLog pluginLog, IAddonLifecycle addonLifecycle, IChatGui chatGui)
     {
         _pluginInterface = pluginInterface;
         _gameGui = gameGui;
@@ -58,6 +59,7 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
         _commandManager = commandManager;
         _pluginLog = pluginLog;
         _addonLifecycle = addonLifecycle;
+        _chatGui = chatGui;
 
         _externalPluginHandler = new ExternalPluginHandler(_pluginInterface, _framework, _pluginLog);
         _configuration = (Configuration?)_pluginInterface.GetPluginConfig() ?? new Configuration();

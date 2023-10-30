@@ -2,6 +2,7 @@
 using System.Linq;
 using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
+using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using Workshoppa.GameData;
@@ -110,6 +111,22 @@ partial class WorkshopPlugin
             {
                 _pluginLog.Error(
                     $"Can't contribute item {item.ItemId} to craft, couldn't find {item.ItemCountPerStep}x in a single inventory slot");
+
+                InventoryManager* inventoryManager = InventoryManager.Instance();
+                int itemCount = 0;
+                if (inventoryManager != null)
+                {
+                    itemCount = inventoryManager->GetInventoryItemCount(item.ItemId, true, false, false) +
+                                inventoryManager->GetInventoryItemCount(item.ItemId, false, false, false);
+                }
+
+                if (itemCount < item.ItemCountPerStep)
+                    _chatGui.PrintError(
+                        $"[Workshoppa] You don't have the needed {item.ItemCountPerStep}x {item.ItemName} to continue.");
+                else
+                    _chatGui.PrintError(
+                        $"[Workshoppa] You don't have {item.ItemCountPerStep}x {item.ItemName} in a single stack, you need to merge the items in your inventory manually to continue.");
+
                 CurrentStage = Stage.RequestStop;
                 break;
             }
