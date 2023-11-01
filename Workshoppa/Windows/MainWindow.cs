@@ -5,6 +5,7 @@ using System.Numerics;
 using Dalamud.Interface;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
+using Dalamud.Interface.Internal;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
@@ -23,12 +24,13 @@ internal sealed class MainWindow : Window
     private readonly IClientState _clientState;
     private readonly Configuration _configuration;
     private readonly WorkshopCache _workshopCache;
+    private readonly IconCache _iconCache;
 
     private string _searchString = string.Empty;
     private bool _checkInventory;
 
     public MainWindow(WorkshopPlugin plugin, DalamudPluginInterface pluginInterface, IClientState clientState,
-        Configuration configuration, WorkshopCache workshopCache)
+        Configuration configuration, WorkshopCache workshopCache, IconCache iconCache)
         : base("Workshoppa###WorkshoppaMainWindow")
     {
         _plugin = plugin;
@@ -36,6 +38,7 @@ internal sealed class MainWindow : Window
         _clientState = clientState;
         _configuration = configuration;
         _workshopCache = workshopCache;
+        _iconCache = iconCache;
 
         Position = new Vector2(100, 100);
         PositionCondition = ImGuiCond.FirstUseEver;
@@ -64,7 +67,18 @@ internal sealed class MainWindow : Window
         if (currentItem != null)
         {
             var currentCraft = _workshopCache.Crafts.Single(x => x.WorkshopItemId == currentItem.WorkshopItemId);
-            ImGui.Text($"Currently Crafting: {currentCraft.Name}");
+            ImGui.Text($"Currently Crafting:");
+
+            IDalamudTextureWrap? icon = _iconCache.GetIcon(currentCraft.IconId);
+            if (icon != null)
+            {
+                ImGui.Image(icon.ImGuiHandle, new Vector2(23, 23));
+                ImGui.SameLine(0, 3);
+                ImGui.SetCursorPosY(ImGui.GetCursorPosY() + 3);
+            }
+
+            ImGui.TextUnformatted($"{currentCraft.Name}");
+            ImGui.Spacing();
 
             if (_plugin.CurrentStage == Stage.Stopped)
             {
@@ -157,6 +171,13 @@ internal sealed class MainWindow : Window
             var item = _configuration.ItemQueue[i];
             var craft = _workshopCache.Crafts.Single(x => x.WorkshopItemId == item.WorkshopItemId);
 
+            IDalamudTextureWrap? icon = _iconCache.GetIcon(craft.IconId);
+            if (icon != null)
+            {
+                ImGui.Image(icon.ImGuiHandle, new Vector2(23, 23));
+                ImGui.SameLine(0, 3);
+            }
+
             ImGui.SetNextItemWidth(100);
             int quantity = item.Quantity;
             if (ImGui.InputInt(craft.Name, ref quantity))
@@ -184,7 +205,7 @@ internal sealed class MainWindow : Window
         }
 
         ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
-        if (ImGui.BeginCombo("##CraftSelection", "Add Craft..."))
+        if (ImGui.BeginCombo("##CraftSelection", "Add Craft...", ImGuiComboFlags.HeightLarge))
         {
             ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
             ImGui.InputTextWithHint("", "Filter...", ref _searchString, 256);
@@ -193,6 +214,13 @@ internal sealed class MainWindow : Window
                          .Where(x => x.Name.ToLower().Contains(_searchString.ToLower()))
                          .OrderBy(x => x.WorkshopItemId))
             {
+                IDalamudTextureWrap? icon = _iconCache.GetIcon(craft.IconId);
+                if (icon != null)
+                {
+                    ImGui.Image(icon.ImGuiHandle, new Vector2(23, 23));
+                    ImGui.SameLine();
+                    ImGui.SetCursorPosY(ImGui.GetCursorPosY() + 3);
+                }
                 if (ImGui.Selectable($"{craft.Name}##SelectCraft{craft.WorkshopItemId}"))
                 {
                     _configuration.ItemQueue.Add(new Configuration.QueuedItem
@@ -265,11 +293,12 @@ internal sealed class MainWindow : Window
         var items = workshopItemIds.Select(x => _workshopCache.Crafts.Single(y => y.WorkshopItemId == x))
             .SelectMany(x => x.Phases)
             .SelectMany(x => x.Items)
-            .GroupBy(x => new { x.Name, x.ItemId })
+            .GroupBy(x => new { x.Name, x.ItemId, x.IconId })
             .OrderBy(x => x.Key.Name)
             .Select(x => new
             {
                 x.Key.ItemId,
+                x.Key.IconId,
                 x.Key.Name,
                 TotalQuantity = completedForCurrentCraft.TryGetValue(x.Key.ItemId, out var completed)
                     ? x.Sum(y => y.TotalQuantity) - completed
@@ -282,6 +311,15 @@ internal sealed class MainWindow : Window
         {
             int inInventory = inventoryManager->GetInventoryItemCount(item.ItemId, true, false, false) +
                               inventoryManager->GetInventoryItemCount(item.ItemId, false, false, false);
+
+            IDalamudTextureWrap? icon = _iconCache.GetIcon(item.IconId);
+            if (icon != null)
+            {
+                ImGui.Image(icon.ImGuiHandle, new Vector2(23, 23));
+                ImGui.SameLine(0, 3);
+                ImGui.SetCursorPosY(ImGui.GetCursorPosY() + 3);
+            }
+
             ImGui.TextColored(inInventory >= item.TotalQuantity ? ImGuiColors.HealerGreen : ImGuiColors.DalamudRed,
                 $"{item.Name} ({inInventory} / {item.TotalQuantity})");
         }

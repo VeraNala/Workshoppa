@@ -8,6 +8,7 @@ using Dalamud.Game.Command;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
+using LLib;
 using Workshoppa.External;
 using Workshoppa.GameData;
 using Workshoppa.Windows;
@@ -17,7 +18,9 @@ namespace Workshoppa;
 [SuppressMessage("ReSharper", "UnusedType.Global")]
 public sealed partial class WorkshopPlugin : IDalamudPlugin
 {
-    private readonly IReadOnlyList<uint> _fabricationStationIds = new uint[] { 2005236, 2005238, 2005240, 2007821, 2011588 }.AsReadOnly();
+    private readonly IReadOnlyList<uint> _fabricationStationIds =
+        new uint[] { 2005236, 2005238, 2005240, 2007821, 2011588 }.AsReadOnly();
+
     internal readonly IReadOnlyList<ushort> WorkshopTerritories = new ushort[] { 423, 424, 425, 653, 984 }.AsReadOnly();
     private readonly WindowSystem _windowSystem = new WindowSystem(nameof(WorkshopPlugin));
 
@@ -48,7 +51,8 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
 
     public WorkshopPlugin(DalamudPluginInterface pluginInterface, IGameGui gameGui, IFramework framework,
         ICondition condition, IClientState clientState, IObjectTable objectTable, IDataManager dataManager,
-        ICommandManager commandManager, IPluginLog pluginLog, IAddonLifecycle addonLifecycle, IChatGui chatGui)
+        ICommandManager commandManager, IPluginLog pluginLog, IAddonLifecycle addonLifecycle, IChatGui chatGui,
+        ITextureProvider textureProvider)
     {
         _pluginInterface = pluginInterface;
         _gameGui = gameGui;
@@ -66,11 +70,13 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
         _workshopCache = new WorkshopCache(dataManager, _pluginLog);
         _gameStrings = new(dataManager, _pluginLog);
 
-        _mainWindow = new(this, _pluginInterface, _clientState, _configuration, _workshopCache);
+        _mainWindow = new(this, _pluginInterface, _clientState, _configuration, _workshopCache,
+            new IconCache(textureProvider));
         _windowSystem.AddWindow(_mainWindow);
         _configWindow = new(_pluginInterface, _configuration);
         _windowSystem.AddWindow(_configWindow);
-        _repairKitWindow = new(this, _pluginInterface, _pluginLog, _gameGui, addonLifecycle, _configuration, _externalPluginHandler);
+        _repairKitWindow = new(this, _pluginInterface, _pluginLog, _gameGui, addonLifecycle, _configuration,
+            _externalPluginHandler);
         _windowSystem.AddWindow(_repairKitWindow);
         _ceruleumTankWindow = new(this, _pluginInterface, _pluginLog, _gameGui, addonLifecycle, _configuration,
             _externalPluginHandler);
@@ -144,7 +150,8 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
 
                 return;
             }
-            else if (_mainWindow.State is MainWindow.ButtonState.Start or MainWindow.ButtonState.Resume && CurrentStage == Stage.Stopped)
+            else if (_mainWindow.State is MainWindow.ButtonState.Start or MainWindow.ButtonState.Resume &&
+                     CurrentStage == Stage.Stopped)
             {
                 // TODO Error checking, we should ensure the player has the required job level for *all* crafting parts
                 _mainWindow.State = MainWindow.ButtonState.None;
@@ -164,12 +171,12 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
                     break;
 
                 case Stage.TargetFabricationStation:
-                        if (_configuration.CurrentlyCraftedItem is { StartedCrafting: true })
-                            CurrentStage = Stage.SelectCraftBranch;
-                        else
-                            CurrentStage = Stage.OpenCraftingLog;
+                    if (_configuration.CurrentlyCraftedItem is { StartedCrafting: true })
+                        CurrentStage = Stage.SelectCraftBranch;
+                    else
+                        CurrentStage = Stage.OpenCraftingLog;
 
-                        InteractWithFabricationStation(fabricationStation!);
+                    InteractWithFabricationStation(fabricationStation!);
 
                     break;
 
@@ -234,7 +241,8 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
 
     private WorkshopCraft GetCurrentCraft()
     {
-        return _workshopCache.Crafts.Single(x => x.WorkshopItemId == _configuration.CurrentlyCraftedItem!.WorkshopItemId);
+        return _workshopCache.Crafts.Single(
+            x => x.WorkshopItemId == _configuration.CurrentlyCraftedItem!.WorkshopItemId);
     }
 
     private void ProcessCommand(string command, string arguments)

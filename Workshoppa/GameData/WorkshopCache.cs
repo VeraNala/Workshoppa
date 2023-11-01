@@ -26,6 +26,7 @@ internal sealed class WorkshopCache
                         WorkshopItemId = x.RowId,
                         ResultItem = x.ResultItem.Row,
                         Name = x.ResultItem.Value!.Name.ToString(),
+                        IconId = x.ResultItem.Value!.Icon,
                         Category = (WorkshopCraftCategory)x.CompanyCraftDraftCategory.Row,
                         Type = x.CompanyCraftType.Row,
                         Phases = x.CompanyCraftPart.Where(part => part.Row != 0)
@@ -42,6 +43,7 @@ internal sealed class WorkshopCache
                                     {
                                         ItemId = itemMapping[item.SupplyItem].RowId,
                                         Name = itemMapping[item.SupplyItem].Name.ToString(),
+                                        IconId = itemMapping[item.SupplyItem].Icon,
                                         SetQuantity = item.SetQuantity,
                                         SetsRequired = item.SetsRequired,
                                     })
