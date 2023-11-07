@@ -65,7 +65,7 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
         _addonLifecycle = addonLifecycle;
         _chatGui = chatGui;
 
-        _externalPluginHandler = new ExternalPluginHandler(_pluginInterface, _framework, _pluginLog);
+        _externalPluginHandler = new ExternalPluginHandler(_pluginInterface, _pluginLog);
         _configuration = (Configuration?)_pluginInterface.GetPluginConfig() ?? new Configuration();
         _workshopCache = new WorkshopCache(dataManager, _pluginLog);
         _gameStrings = new(dataManager, _pluginLog);
