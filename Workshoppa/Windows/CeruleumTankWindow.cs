@@ -2,7 +2,6 @@
 using System.Linq;
 using Dalamud.Interface;
 using Dalamud.Interface.Components;
-using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
@@ -19,7 +18,6 @@ internal sealed class CeruleumTankWindow : ShopWindow
     private const int CeruleumTankItemId = 10155;
 
     private readonly WorkshopPlugin _plugin;
-    private readonly DalamudPluginInterface _pluginInterface;
     private readonly IPluginLog _pluginLog;
     private readonly Configuration _configuration;
 
@@ -27,13 +25,12 @@ internal sealed class CeruleumTankWindow : ShopWindow
     private int _buyStackCount;
     private bool _buyPartialStacks = true;
 
-    public CeruleumTankWindow(WorkshopPlugin plugin, DalamudPluginInterface pluginInterface, IPluginLog pluginLog,
+    public CeruleumTankWindow(WorkshopPlugin plugin, IPluginLog pluginLog,
         IGameGui gameGui, IAddonLifecycle addonLifecycle, Configuration configuration,
         ExternalPluginHandler externalPluginHandler)
         : base("Ceruleum Tanks###WorkshoppaCeruleumTankWindow", "FreeCompanyCreditShop", plugin, pluginLog, gameGui, addonLifecycle, externalPluginHandler)
     {
         _plugin = plugin;
-        _pluginInterface = pluginInterface;
         _pluginLog = pluginLog;
         _configuration = configuration;
     }
@@ -83,8 +80,6 @@ internal sealed class CeruleumTankWindow : ShopWindow
 
         int ceruleumTanks = GetItemCount(CeruleumTankItemId);
         int freeInventorySlots = _plugin.GetFreeInventorySlots();
-
-        LImGui.AddPatreonIcon(_pluginInterface);
 
         ImGui.Text("Inventory");
         ImGui.Indent();

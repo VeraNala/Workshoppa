@@ -2,10 +2,11 @@
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using ImGuiNET;
+using LLib;
 
 namespace Workshoppa.Windows;
 
-internal sealed class ConfigWindow : Window
+internal sealed class ConfigWindow : LImGui.LWindow
 {
     private readonly DalamudPluginInterface _pluginInterface;
     private readonly Configuration _configuration;

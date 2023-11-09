@@ -75,10 +75,10 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
         _windowSystem.AddWindow(_mainWindow);
         _configWindow = new(_pluginInterface, _configuration);
         _windowSystem.AddWindow(_configWindow);
-        _repairKitWindow = new(this, _pluginInterface, _pluginLog, _gameGui, addonLifecycle, _configuration,
+        _repairKitWindow = new(this, _pluginLog, _gameGui, addonLifecycle, _configuration,
             _externalPluginHandler);
         _windowSystem.AddWindow(_repairKitWindow);
-        _ceruleumTankWindow = new(this, _pluginInterface, _pluginLog, _gameGui, addonLifecycle, _configuration,
+        _ceruleumTankWindow = new(this, _pluginLog, _gameGui, addonLifecycle, _configuration,
             _externalPluginHandler);
         _windowSystem.AddWindow(_ceruleumTankWindow);
 

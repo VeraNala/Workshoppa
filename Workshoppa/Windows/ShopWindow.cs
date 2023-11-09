@@ -2,18 +2,18 @@
 using System.Numerics;
 using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
-using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
+using LLib;
 using LLib.GameUI;
 using Workshoppa.External;
 using Workshoppa.GameData.Shops;
 
 namespace Workshoppa.Windows;
 
-internal abstract class ShopWindow : Window, IDisposable
+internal abstract class ShopWindow : LImGui.LWindow, IDisposable
 {
     private readonly string _addonName;
     private readonly WorkshopPlugin _plugin;

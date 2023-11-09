@@ -17,7 +17,7 @@ using Workshoppa.GameData;
 namespace Workshoppa.Windows;
 
 // FIXME The close button doesn't work near the workshop, either hide it or make it work
-internal sealed class MainWindow : Window
+internal sealed class MainWindow : LImGui.LWindow
 {
     private readonly WorkshopPlugin _plugin;
     private readonly DalamudPluginInterface _pluginInterface;
@@ -50,6 +50,7 @@ internal sealed class MainWindow : Window
         };
 
         Flags = ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse;
+        AllowClickthrough = false;
     }
 
     public EOpenReason OpenReason { get; set; } = EOpenReason.None;
@@ -61,8 +62,6 @@ internal sealed class MainWindow : Window
 
     public override void Draw()
     {
-        LImGui.AddPatreonIcon(_pluginInterface);
-
         var currentItem = _configuration.CurrentlyCraftedItem;
         if (currentItem != null)
         {

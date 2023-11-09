@@ -4,11 +4,9 @@ using Dalamud.Game.Text;
 using Dalamud.Interface;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
-using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
-using LLib;
 using LLib.GameUI;
 using Workshoppa.External;
 using Workshoppa.GameData.Shops;
@@ -20,16 +18,14 @@ internal sealed class RepairKitWindow : ShopWindow
 {
     private const int DarkMatterCluster6ItemId = 10386;
 
-    private readonly DalamudPluginInterface _pluginInterface;
     private readonly IPluginLog _pluginLog;
     private readonly Configuration _configuration;
 
-    public RepairKitWindow(WorkshopPlugin plugin, DalamudPluginInterface pluginInterface, IPluginLog pluginLog,
+    public RepairKitWindow(WorkshopPlugin plugin, IPluginLog pluginLog,
         IGameGui gameGui, IAddonLifecycle addonLifecycle, Configuration configuration,
         ExternalPluginHandler externalPluginHandler)
         : base("Repair Kits###WorkshoppaRepairKitWindow", "Shop", plugin, pluginLog, gameGui, addonLifecycle, externalPluginHandler)
     {
-        _pluginInterface = pluginInterface;
         _pluginLog = pluginLog;
         _configuration = configuration;
     }
@@ -91,8 +87,6 @@ internal sealed class RepairKitWindow : ShopWindow
             IsOpen = false;
             return;
         }
-
-        LImGui.AddPatreonIcon(_pluginInterface);
 
         ImGui.Text("Inventory");
         ImGui.Indent();
