@@ -42,7 +42,8 @@ partial class WorkshopPlugin
                     if (npcIds.Contains(GetNpcId(obj)))
                     {
                         o = obj;
-                        float distance = Vector3.Distance(localPlayerPosition.Value, obj.Position + new Vector3(0, -2, 0));
+                        float distance = Vector3.Distance(localPlayerPosition.Value,
+                            obj.Position + new Vector3(0, -2, 0));
                         if (distance > 0.01)
                             return distance;
                     }
@@ -62,7 +63,8 @@ partial class WorkshopPlugin
 
     private unsafe AtkUnitBase* GetCompanyCraftingLogAddon()
     {
-        if (_gameGui.TryGetAddonByName<AtkUnitBase>("CompanyCraftRecipeNoteBook", out var addon) && LAddon.IsAddonReady(addon))
+        if (_gameGui.TryGetAddonByName<AtkUnitBase>("CompanyCraftRecipeNoteBook", out var addon) &&
+            LAddon.IsAddonReady(addon))
             return addon;
 
         return null;
@@ -243,5 +245,33 @@ partial class WorkshopPlugin
         }
 
         return count;
+    }
+
+    public unsafe int DetermineMaxStackSize(uint itemId)
+    {
+        var inventoryManger = InventoryManager.Instance();
+        if (inventoryManger == null)
+            return 0;
+
+        int max = 0;
+        for (InventoryType t = InventoryType.Inventory1; t <= InventoryType.Inventory4; ++t)
+        {
+            var container = inventoryManger->GetInventoryContainer(t);
+            for (int i = 0; i < container->Size; ++i)
+            {
+                var item = container->GetInventorySlot(i);
+                if (item == null || item->ItemID == 0)
+                    return 99;
+
+                if (item->ItemID == itemId)
+                {
+                    max += (999 - (int)item->Quantity);
+                    if (max >= 99)
+                        break;
+                }
+            }
+        }
+
+        return Math.Min(99, max);
     }
 }

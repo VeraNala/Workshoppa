@@ -157,7 +157,8 @@ internal abstract class ShopWindow : LImGui.LWindow, IDisposable
         if (ItemForSale == null || PurchaseState == null)
             return;
 
-        if (!_plugin.HasFreeInventorySlot())
+        int maxStackSize = _plugin.DetermineMaxStackSize(ItemForSale.ItemId);
+        if (maxStackSize == 0 && !_plugin.HasFreeInventorySlot())
         {
             _pluginLog.Warning($"No free inventory slots, can't buy more {ItemForSale.ItemName}");
             PurchaseState = null;
@@ -168,7 +169,7 @@ internal abstract class ShopWindow : LImGui.LWindow, IDisposable
             if (PurchaseState.NextStep <= DateTime.Now &&
                 _gameGui.TryGetAddonByName(_addonName, out AtkUnitBase* addonShop))
             {
-                int buyNow = Math.Min(PurchaseState.ItemsLeftToBuy, 99);
+                int buyNow = Math.Min(PurchaseState.ItemsLeftToBuy, maxStackSize);
                 _pluginLog.Information($"Buying {buyNow}x {ItemForSale.ItemName}");
 
                 FirePurchaseCallback(addonShop, buyNow);

@@ -101,9 +101,11 @@ internal sealed class RepairKitWindow : ShopWindow
         if (PurchaseState != null)
         {
             HandleNextPurchaseStep();
-
-            if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Times, "Cancel Auto-Buy"))
-                CancelAutoPurchase();
+            if (PurchaseState != null)
+            {
+                if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Times, "Cancel Auto-Buy"))
+                    CancelAutoPurchase();
+            }
         }
         else
         {

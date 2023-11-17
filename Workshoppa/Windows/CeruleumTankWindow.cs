@@ -106,10 +106,12 @@ internal sealed class CeruleumTankWindow : ShopWindow
         if (PurchaseState != null)
         {
             HandleNextPurchaseStep();
-
-            ImGui.Text($"Buying {FormatStackCount(PurchaseState.ItemsLeftToBuy)}...");
-            if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Times, "Cancel Auto-Buy"))
-                CancelAutoPurchase();
+            if (PurchaseState != null)
+            {
+                ImGui.Text($"Buying {FormatStackCount(PurchaseState.ItemsLeftToBuy)}...");
+                if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Times, "Cancel Auto-Buy"))
+                    CancelAutoPurchase();
+            }
         }
         else
         {
