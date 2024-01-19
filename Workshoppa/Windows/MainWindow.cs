@@ -2,16 +2,18 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.Text;
+using System.Text.Json;
 using Dalamud.Interface;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Internal;
-using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using ImGuiNET;
 using LLib;
+using Workshoppa.Data;
 using Workshoppa.GameData;
 
 namespace Workshoppa.Windows;
@@ -19,18 +21,23 @@ namespace Workshoppa.Windows;
 // FIXME The close button doesn't work near the workshop, either hide it or make it work
 internal sealed class MainWindow : LImGui.LWindow
 {
+    private const string JsonPrefix = "workshoppa:v1:";
+
     private readonly WorkshopPlugin _plugin;
     private readonly DalamudPluginInterface _pluginInterface;
     private readonly IClientState _clientState;
     private readonly Configuration _configuration;
     private readonly WorkshopCache _workshopCache;
     private readonly IconCache _iconCache;
+    private readonly IChatGui _chatGui;
+    private readonly IPluginLog _pluginLog;
 
     private string _searchString = string.Empty;
     private bool _checkInventory;
 
     public MainWindow(WorkshopPlugin plugin, DalamudPluginInterface pluginInterface, IClientState clientState,
-        Configuration configuration, WorkshopCache workshopCache, IconCache iconCache)
+        Configuration configuration, WorkshopCache workshopCache, IconCache iconCache, IChatGui chatGui,
+        IPluginLog pluginLog)
         : base("Workshoppa###WorkshoppaMainWindow")
     {
         _plugin = plugin;
@@ -39,6 +46,8 @@ internal sealed class MainWindow : LImGui.LWindow
         _configuration = configuration;
         _workshopCache = workshopCache;
         _iconCache = iconCache;
+        _chatGui = chatGui;
+        _pluginLog = pluginLog;
 
         Position = new Vector2(100, 100);
         PositionCondition = ImGuiCond.FirstUseEver;
@@ -220,6 +229,7 @@ internal sealed class MainWindow : LImGui.LWindow
                     ImGui.SameLine();
                     ImGui.SetCursorPosY(ImGui.GetCursorPosY() + 3);
                 }
+
                 if (ImGui.Selectable($"{craft.Name}##SelectCraft{craft.WorkshopItemId}"))
                 {
                     _configuration.ItemQueue.Add(new Configuration.QueuedItem
@@ -234,10 +244,98 @@ internal sealed class MainWindow : LImGui.LWindow
             ImGui.EndCombo();
         }
 
+        DrawImportExport();
+
         ImGui.EndDisabled();
 
         ImGui.Separator();
         ImGui.Text($"Debug (Stage): {_plugin.CurrentStage}");
+    }
+
+    private void DrawImportExport()
+    {
+        ImGui.BeginDisabled(_configuration.ItemQueue.Count == 0);
+        if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Upload, "Export to Clipboard"))
+        {
+            var toClipboardItems = _configuration.ItemQueue.Select(x => new ClipboardItem
+                {
+                    WorkshopItemId = x.WorkshopItemId,
+                    Quantity = x.Quantity
+                })
+                .ToList();
+
+            var clipboardText =
+                Convert.ToBase64String(Encoding.UTF8.GetBytes(JsonPrefix + JsonSerializer.Serialize(toClipboardItems)));
+            ImGui.SetClipboardText(clipboardText);
+
+            _chatGui.Print("Copied queue content to clipboard.");
+        }
+
+        ImGui.EndDisabled();
+
+        ImGui.SameLine();
+        List<ClipboardItem> fromClipboardItems = new();
+        try
+        {
+            string? clipboardText = GetClipboardText();
+            if (!string.IsNullOrWhiteSpace(clipboardText))
+            {
+                clipboardText = Encoding.UTF8.GetString(Convert.FromBase64String(clipboardText));
+                if (clipboardText.StartsWith(JsonPrefix))
+                {
+                    clipboardText = clipboardText.Substring(JsonPrefix.Length);
+                    fromClipboardItems = JsonSerializer.Deserialize<List<ClipboardItem>>(clipboardText) ?? new();
+                }
+            }
+        }
+        catch (Exception)
+        {
+            //_pluginLog.Warning(e, "Unable to extract clipboard text");
+        }
+
+        ImGui.BeginDisabled(fromClipboardItems.Count == 0);
+        if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Download, "Import from Clipboard"))
+        {
+            _pluginLog.Information($"Importing {fromClipboardItems.Count} items");
+            foreach (var item in fromClipboardItems)
+            {
+                var craft = _workshopCache.Crafts.FirstOrDefault(x => x.WorkshopItemId == item.WorkshopItemId);
+                if (craft != null)
+                {
+                    var queuedItem =
+                        _configuration.ItemQueue.FirstOrDefault(x => x.WorkshopItemId == item.WorkshopItemId);
+                    if (queuedItem != null)
+                        queuedItem.Quantity += item.Quantity;
+                    else
+                    {
+                        _configuration.ItemQueue.Add(new Configuration.QueuedItem
+                        {
+                            WorkshopItemId = item.WorkshopItemId,
+                            Quantity = item.Quantity,
+                        });
+                    }
+                }
+            }
+
+            Save();
+        }
+
+        ImGui.EndDisabled();
+    }
+
+    /// <summary>
+    /// The default implementation for <see cref="ImGui.GetClipboardText"/> throws an NullReferenceException if the clipboard is empty, maybe also if it doesn't contain text.
+    /// </summary>
+    private unsafe string? GetClipboardText()
+    {
+        byte* ptr = ImGuiNative.igGetClipboardText();
+        if (ptr == null)
+            return null;
+
+        int byteCount = 0;
+        while (ptr[byteCount] != 0)
+            ++byteCount;
+        return Encoding.UTF8.GetString(ptr, byteCount);
     }
 
     private void Save()
