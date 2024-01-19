@@ -34,6 +34,7 @@ internal sealed class MainWindow : LImGui.LWindow
 
     private string _searchString = string.Empty;
     private bool _checkInventory;
+    private string _newPresetName = string.Empty;
 
     public MainWindow(WorkshopPlugin plugin, DalamudPluginInterface pluginInterface, IClientState clientState,
         Configuration configuration, WorkshopCache workshopCache, IconCache iconCache, IChatGui chatGui,
@@ -58,7 +59,7 @@ internal sealed class MainWindow : LImGui.LWindow
             MaximumSize = new Vector2(500, 9999),
         };
 
-        Flags = ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse;
+        Flags = ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.MenuBar;
         AllowClickthrough = false;
     }
 
@@ -71,6 +72,16 @@ internal sealed class MainWindow : LImGui.LWindow
 
     public override void Draw()
     {
+        if (ImGui.BeginMenuBar())
+        {
+            ImGui.BeginDisabled(_plugin.CurrentStage != Stage.Stopped);
+            DrawPresetsMenu();
+            DrawClipboardMenu();
+            ImGui.EndDisabled();
+
+            ImGui.EndMenuBar();
+        }
+
         var currentItem = _configuration.CurrentlyCraftedItem;
         if (currentItem != null)
         {
@@ -244,83 +255,211 @@ internal sealed class MainWindow : LImGui.LWindow
             ImGui.EndCombo();
         }
 
-        DrawImportExport();
-
         ImGui.EndDisabled();
 
         ImGui.Separator();
         ImGui.Text($"Debug (Stage): {_plugin.CurrentStage}");
     }
 
-    private void DrawImportExport()
+    private void DrawPresetsMenu()
     {
-        ImGui.BeginDisabled(_configuration.ItemQueue.Count == 0);
-        if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Upload, "Export to Clipboard"))
+        if (ImGui.BeginMenu("Presets"))
         {
-            var toClipboardItems = _configuration.ItemQueue.Select(x => new ClipboardItem
-                {
-                    WorkshopItemId = x.WorkshopItemId,
-                    Quantity = x.Quantity
-                })
-                .ToList();
-
-            var clipboardText =
-                Convert.ToBase64String(Encoding.UTF8.GetBytes(JsonPrefix + JsonSerializer.Serialize(toClipboardItems)));
-            ImGui.SetClipboardText(clipboardText);
-
-            _chatGui.Print("Copied queue content to clipboard.");
-        }
-
-        ImGui.EndDisabled();
-
-        ImGui.SameLine();
-        List<ClipboardItem> fromClipboardItems = new();
-        try
-        {
-            string? clipboardText = GetClipboardText();
-            if (!string.IsNullOrWhiteSpace(clipboardText))
+            if (_configuration.Presets.Count == 0)
             {
-                clipboardText = Encoding.UTF8.GetString(Convert.FromBase64String(clipboardText));
-                if (clipboardText.StartsWith(JsonPrefix))
-                {
-                    clipboardText = clipboardText.Substring(JsonPrefix.Length);
-                    fromClipboardItems = JsonSerializer.Deserialize<List<ClipboardItem>>(clipboardText) ?? new();
-                }
+                ImGui.BeginDisabled();
+                ImGui.MenuItem("Import Queue from Preset");
+                ImGui.EndDisabled();
             }
-        }
-        catch (Exception)
-        {
-            //_pluginLog.Warning(e, "Unable to extract clipboard text");
-        }
-
-        ImGui.BeginDisabled(fromClipboardItems.Count == 0);
-        if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Download, "Import from Clipboard"))
-        {
-            _pluginLog.Information($"Importing {fromClipboardItems.Count} items");
-            foreach (var item in fromClipboardItems)
+            else if (ImGui.BeginMenu("Import Queue from Preset"))
             {
-                var craft = _workshopCache.Crafts.FirstOrDefault(x => x.WorkshopItemId == item.WorkshopItemId);
-                if (craft != null)
+                if (_configuration.Presets.Count == 0)
+                    ImGui.MenuItem("You have no presets.");
+
+                foreach (var preset in _configuration.Presets)
                 {
-                    var queuedItem =
-                        _configuration.ItemQueue.FirstOrDefault(x => x.WorkshopItemId == item.WorkshopItemId);
-                    if (queuedItem != null)
-                        queuedItem.Quantity += item.Quantity;
-                    else
+                    ImGui.PushID($"Preset{preset.Id}");
+                    if (ImGui.MenuItem(preset.Name))
                     {
-                        _configuration.ItemQueue.Add(new Configuration.QueuedItem
+                        foreach (var item in preset.ItemQueue)
                         {
-                            WorkshopItemId = item.WorkshopItemId,
-                            Quantity = item.Quantity,
-                        });
+                            var queuedItem =
+                                _configuration.ItemQueue.FirstOrDefault(x => x.WorkshopItemId == item.WorkshopItemId);
+                            if (queuedItem != null)
+                                queuedItem.Quantity += item.Quantity;
+                            else
+                            {
+                                _configuration.ItemQueue.Add(new Configuration.QueuedItem
+                                {
+                                    WorkshopItemId = item.WorkshopItemId,
+                                    Quantity = item.Quantity,
+                                });
+                            }
+                        }
+
+                        Save();
+                        _chatGui.Print($"Imported {preset.ItemQueue.Count} items from preset.");
+                    }
+
+                    ImGui.PopID();
+                }
+
+                ImGui.EndMenu();
+            }
+
+            if (_configuration.ItemQueue.Count == 0)
+            {
+                ImGui.BeginDisabled();
+                ImGui.MenuItem("Export Queue to Preset");
+                ImGui.EndDisabled();
+            }
+            else if (ImGui.BeginMenu("Export Queue to Preset"))
+            {
+                ImGui.InputTextWithHint("", "Preset Name...", ref _newPresetName, 64);
+
+                ImGui.BeginDisabled(_configuration.Presets.Any(x =>
+                    x.Name.Equals(_newPresetName, StringComparison.CurrentCultureIgnoreCase)));
+                if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Save, "Save"))
+                {
+                    _configuration.Presets.Add(new Configuration.Preset
+                    {
+                        Id = Guid.NewGuid(),
+                        Name = _newPresetName,
+                        ItemQueue = _configuration.ItemQueue.Select(x => new Configuration.QueuedItem
+                        {
+                            WorkshopItemId = x.WorkshopItemId,
+                            Quantity = x.Quantity
+                        }).ToList()
+                    });
+
+                    Save();
+                    _chatGui.Print($"Saved queue as preset '{_newPresetName}'.");
+
+                    _newPresetName = string.Empty;
+                }
+
+                ImGui.EndDisabled();
+
+                ImGui.EndMenu();
+            }
+
+            if (_configuration.Presets.Count == 0)
+            {
+                ImGui.BeginDisabled();
+                ImGui.MenuItem("Delete Preset");
+                ImGui.EndDisabled();
+            }
+            else if (ImGui.BeginMenu("Delete Preset"))
+            {
+                if (_configuration.Presets.Count == 0)
+                    ImGui.MenuItem("You have no presets.");
+
+                Guid? presetToRemove = null;
+                foreach (var preset in _configuration.Presets)
+                {
+                    ImGui.PushID($"Preset{preset.Id}");
+                    if (ImGui.MenuItem(preset.Name))
+                    {
+                        presetToRemove = preset.Id;
+                    }
+
+                    ImGui.PopID();
+                }
+
+                if (presetToRemove != null)
+                {
+                    var preset = _configuration.Presets.First(x => x.Id == presetToRemove);
+                    _configuration.Presets.Remove(preset);
+
+                    Save();
+                    _chatGui.Print($"Deleted preset '{preset.Name}'.");
+                }
+
+                ImGui.EndMenu();
+            }
+
+            ImGui.EndMenu();
+        }
+    }
+
+    private void DrawClipboardMenu()
+    {
+        if (ImGui.BeginMenu("Clipboard"))
+        {
+            List<ClipboardItem> fromClipboardItems = new();
+            try
+            {
+                string? clipboardText = GetClipboardText();
+                if (!string.IsNullOrWhiteSpace(clipboardText))
+                {
+                    clipboardText = Encoding.UTF8.GetString(Convert.FromBase64String(clipboardText));
+                    if (clipboardText.StartsWith(JsonPrefix))
+                    {
+                        clipboardText = clipboardText.Substring(JsonPrefix.Length);
+                        fromClipboardItems = JsonSerializer.Deserialize<List<ClipboardItem>>(clipboardText) ?? new();
                     }
                 }
             }
+            catch (Exception)
+            {
+                //_pluginLog.Warning(e, "Unable to extract clipboard text");
+            }
 
-            Save();
+            ImGui.BeginDisabled(fromClipboardItems.Count == 0);
+            if (ImGui.MenuItem("Import Queue from Clipboard"))
+            {
+                _pluginLog.Information($"Importing {fromClipboardItems.Count} items...");
+                int count = 0;
+                foreach (var item in fromClipboardItems)
+                {
+                    var craft = _workshopCache.Crafts.FirstOrDefault(x => x.WorkshopItemId == item.WorkshopItemId);
+                    if (craft != null)
+                    {
+                        var queuedItem =
+                            _configuration.ItemQueue.FirstOrDefault(x => x.WorkshopItemId == item.WorkshopItemId);
+                        if (queuedItem != null)
+                            queuedItem.Quantity += item.Quantity;
+                        else
+                        {
+                            _configuration.ItemQueue.Add(new Configuration.QueuedItem
+                            {
+                                WorkshopItemId = item.WorkshopItemId,
+                                Quantity = item.Quantity,
+                            });
+                        }
+
+                        ++count;
+                    }
+                }
+
+                Save();
+                _chatGui.Print($"Imported {count} items from clipboard.");
+            }
+
+            ImGui.EndDisabled();
+
+            ImGui.BeginDisabled(_configuration.ItemQueue.Count == 0);
+            if (ImGui.MenuItem("Export Queue to Clipboard"))
+            {
+                var toClipboardItems = _configuration.ItemQueue.Select(x => new ClipboardItem
+                    {
+                        WorkshopItemId = x.WorkshopItemId,
+                        Quantity = x.Quantity
+                    })
+                    .ToList();
+
+                var clipboardText =
+                    Convert.ToBase64String(
+                        Encoding.UTF8.GetBytes(JsonPrefix + JsonSerializer.Serialize(toClipboardItems)));
+                ImGui.SetClipboardText(clipboardText);
+
+                _chatGui.Print("Copied queue content to clipboard.");
+            }
+
+            ImGui.EndDisabled();
+
+            ImGui.EndMenu();
         }
-
-        ImGui.EndDisabled();
     }
 
     /// <summary>

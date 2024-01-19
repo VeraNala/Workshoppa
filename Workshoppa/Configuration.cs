@@ -14,6 +14,7 @@ internal sealed class Configuration : IPluginConfiguration
     public List<QueuedItem> ItemQueue { get; set; } = new();
     public bool EnableRepairKitCalculator { get; set; } = true;
     public bool EnableCeruleumTankCalculator { get; set; } = true;
+    public List<Preset> Presets { get; set; } = new();
 
     internal sealed class QueuedItem
     {
@@ -75,5 +76,12 @@ internal sealed class Configuration : IPluginConfiguration
     {
         public uint ItemId { get; set; }
         public uint QuantityComplete { get; set; }
+    }
+
+    internal sealed class Preset
+    {
+        public required Guid Id { get; set; }
+        public required string Name { get; set; }
+        public List<QueuedItem> ItemQueue { get; set; } = new();
     }
 }
