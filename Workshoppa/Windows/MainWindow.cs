@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Text;
-using System.Text.Json;
+using System.Text.RegularExpressions;
 using Dalamud.Interface;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
@@ -13,7 +13,6 @@ using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using ImGuiNET;
 using LLib;
-using Workshoppa.Data;
 using Workshoppa.GameData;
 
 namespace Workshoppa.Windows;
@@ -21,7 +20,7 @@ namespace Workshoppa.Windows;
 // FIXME The close button doesn't work near the workshop, either hide it or make it work
 internal sealed class MainWindow : LImGui.LWindow
 {
-    private const string JsonPrefix = "workshoppa:v1:";
+    private static readonly Regex CountAndName = new(@"^(\d{1,5})x?\s+(.*)$", RegexOptions.Compiled);
 
     private readonly WorkshopPlugin _plugin;
     private readonly DalamudPluginInterface _pluginInterface;
@@ -386,17 +385,28 @@ internal sealed class MainWindow : LImGui.LWindow
     {
         if (ImGui.BeginMenu("Clipboard"))
         {
-            List<ClipboardItem> fromClipboardItems = new();
+            List<Configuration.QueuedItem> fromClipboardItems = new();
             try
             {
                 string? clipboardText = GetClipboardText();
                 if (!string.IsNullOrWhiteSpace(clipboardText))
                 {
-                    clipboardText = Encoding.UTF8.GetString(Convert.FromBase64String(clipboardText));
-                    if (clipboardText.StartsWith(JsonPrefix))
+                    foreach (var clipboardLine in clipboardText.ReplaceLineEndings().Split(Environment.NewLine))
                     {
-                        clipboardText = clipboardText.Substring(JsonPrefix.Length);
-                        fromClipboardItems = JsonSerializer.Deserialize<List<ClipboardItem>>(clipboardText) ?? new();
+                        var match = CountAndName.Match(clipboardLine);
+                        if (!match.Success)
+                            continue;
+
+                        var craft = _workshopCache.Crafts.FirstOrDefault(x =>
+                            x.Name.Equals(match.Groups[2].Value, StringComparison.CurrentCultureIgnoreCase));
+                        if (craft != null && int.TryParse(match.Groups[1].Value, out int quantity))
+                        {
+                            fromClipboardItems.Add(new Configuration.QueuedItem
+                            {
+                                WorkshopItemId = craft.WorkshopItemId,
+                                Quantity = quantity,
+                            });
+                        }
                     }
                 }
             }
@@ -412,24 +422,20 @@ internal sealed class MainWindow : LImGui.LWindow
                 int count = 0;
                 foreach (var item in fromClipboardItems)
                 {
-                    var craft = _workshopCache.Crafts.FirstOrDefault(x => x.WorkshopItemId == item.WorkshopItemId);
-                    if (craft != null)
+                    var queuedItem =
+                        _configuration.ItemQueue.FirstOrDefault(x => x.WorkshopItemId == item.WorkshopItemId);
+                    if (queuedItem != null)
+                        queuedItem.Quantity += item.Quantity;
+                    else
                     {
-                        var queuedItem =
-                            _configuration.ItemQueue.FirstOrDefault(x => x.WorkshopItemId == item.WorkshopItemId);
-                        if (queuedItem != null)
-                            queuedItem.Quantity += item.Quantity;
-                        else
+                        _configuration.ItemQueue.Add(new Configuration.QueuedItem
                         {
-                            _configuration.ItemQueue.Add(new Configuration.QueuedItem
-                            {
-                                WorkshopItemId = item.WorkshopItemId,
-                                Quantity = item.Quantity,
-                            });
-                        }
-
-                        ++count;
+                            WorkshopItemId = item.WorkshopItemId,
+                            Quantity = item.Quantity,
+                        });
                     }
+
+                    ++count;
                 }
 
                 Save();
@@ -441,17 +447,14 @@ internal sealed class MainWindow : LImGui.LWindow
             ImGui.BeginDisabled(_configuration.ItemQueue.Count == 0);
             if (ImGui.MenuItem("Export Queue to Clipboard"))
             {
-                var toClipboardItems = _configuration.ItemQueue.Select(x => new ClipboardItem
-                    {
-                        WorkshopItemId = x.WorkshopItemId,
-                        Quantity = x.Quantity
-                    })
-                    .ToList();
-
-                var clipboardText =
-                    Convert.ToBase64String(
-                        Encoding.UTF8.GetBytes(JsonPrefix + JsonSerializer.Serialize(toClipboardItems)));
-                ImGui.SetClipboardText(clipboardText);
+                var toClipboardItems = _configuration.ItemQueue.Select(x =>
+                        new
+                        {
+                            _workshopCache.Crafts.Single(y => x.WorkshopItemId == y.WorkshopItemId).Name,
+                            x.Quantity
+                        })
+                    .Select(x => $"{x.Quantity}x {x.Name}");
+                ImGui.SetClipboardText(string.Join(Environment.NewLine, toClipboardItems));
 
                 _chatGui.Print("Copied queue content to clipboard.");
             }
