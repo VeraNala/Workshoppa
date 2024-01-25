@@ -29,6 +29,7 @@ internal sealed class MainWindow : LImGui.LWindow
     private readonly WorkshopCache _workshopCache;
     private readonly IconCache _iconCache;
     private readonly IChatGui _chatGui;
+    private readonly RecipeTree _recipeTree;
     private readonly IPluginLog _pluginLog;
 
     private string _searchString = string.Empty;
@@ -37,7 +38,7 @@ internal sealed class MainWindow : LImGui.LWindow
 
     public MainWindow(WorkshopPlugin plugin, DalamudPluginInterface pluginInterface, IClientState clientState,
         Configuration configuration, WorkshopCache workshopCache, IconCache iconCache, IChatGui chatGui,
-        IPluginLog pluginLog)
+        RecipeTree recipeTree, IPluginLog pluginLog)
         : base("Workshoppa###WorkshoppaMainWindow")
     {
         _plugin = plugin;
@@ -47,6 +48,7 @@ internal sealed class MainWindow : LImGui.LWindow
         _workshopCache = workshopCache;
         _iconCache = iconCache;
         _chatGui = chatGui;
+        _recipeTree = recipeTree;
         _pluginLog = pluginLog;
 
         Position = new Vector2(100, 100);
@@ -459,6 +461,22 @@ internal sealed class MainWindow : LImGui.LWindow
                 _chatGui.Print("Copied queue content to clipboard.");
             }
 
+            if (ImGui.MenuItem("Export Material List to Clipboard"))
+            {
+                var toClipboardItems = _recipeTree.ResolveRecipes(GetMaterialList()).Where(x => x.Type == Ingredient.EType.Craftable);
+                ImGui.SetClipboardText(string.Join(Environment.NewLine, toClipboardItems.Select(x => $"{x.TotalQuantity}x {x.Name}")));
+
+                _chatGui.Print("Copied material list to clipboard.");
+            }
+
+            if (ImGui.MenuItem("Export Gathered/Venture materials to Clipboard"))
+            {
+                var toClipboardItems = _recipeTree.ResolveRecipes(GetMaterialList()).Where(x => x.Type == Ingredient.EType.Gatherable);
+                ImGui.SetClipboardText(string.Join(Environment.NewLine, toClipboardItems.Select(x => $"{x.TotalQuantity}x {x.Name}")));
+
+                _chatGui.Print("Copied material list to clipboard.");
+            }
+
             ImGui.EndDisabled();
 
             ImGui.EndMenu();
@@ -504,7 +522,32 @@ internal sealed class MainWindow : LImGui.LWindow
     private unsafe void CheckMaterial()
     {
         ImGui.Text("Items needed for all crafts in queue:");
+        var items = GetMaterialList();
 
+        ImGui.Indent(20);
+        InventoryManager* inventoryManager = InventoryManager.Instance();
+        foreach (var item in items)
+        {
+            int inInventory = inventoryManager->GetInventoryItemCount(item.ItemId, true, false, false) +
+                              inventoryManager->GetInventoryItemCount(item.ItemId, false, false, false);
+
+            IDalamudTextureWrap? icon = _iconCache.GetIcon(item.IconId);
+            if (icon != null)
+            {
+                ImGui.Image(icon.ImGuiHandle, new Vector2(23, 23));
+                ImGui.SameLine(0, 3);
+                ImGui.SetCursorPosY(ImGui.GetCursorPosY() + 3);
+            }
+
+            ImGui.TextColored(inInventory >= item.TotalQuantity ? ImGuiColors.HealerGreen : ImGuiColors.DalamudRed,
+                $"{item.Name} ({inInventory} / {item.TotalQuantity})");
+        }
+
+        ImGui.Unindent(20);
+    }
+
+    private List<Ingredient> GetMaterialList()
+    {
         List<uint> workshopItemIds = _configuration.ItemQueue
             .SelectMany(x => Enumerable.Range(0, x.Quantity).Select(_ => x.WorkshopItemId))
             .ToList();
@@ -529,41 +572,22 @@ internal sealed class MainWindow : LImGui.LWindow
             }
         }
 
-        var items = workshopItemIds.Select(x => _workshopCache.Crafts.Single(y => y.WorkshopItemId == x))
+        return workshopItemIds.Select(x => _workshopCache.Crafts.Single(y => y.WorkshopItemId == x))
             .SelectMany(x => x.Phases)
             .SelectMany(x => x.Items)
             .GroupBy(x => new { x.Name, x.ItemId, x.IconId })
             .OrderBy(x => x.Key.Name)
-            .Select(x => new
+            .Select(x => new Ingredient
             {
-                x.Key.ItemId,
-                x.Key.IconId,
-                x.Key.Name,
+                ItemId = x.Key.ItemId,
+                IconId = x.Key.IconId,
+                Name = x.Key.Name,
                 TotalQuantity = completedForCurrentCraft.TryGetValue(x.Key.ItemId, out var completed)
                     ? x.Sum(y => y.TotalQuantity) - completed
                     : x.Sum(y => y.TotalQuantity),
-            });
-
-        ImGui.Indent(20);
-        InventoryManager* inventoryManager = InventoryManager.Instance();
-        foreach (var item in items)
-        {
-            int inInventory = inventoryManager->GetInventoryItemCount(item.ItemId, true, false, false) +
-                              inventoryManager->GetInventoryItemCount(item.ItemId, false, false, false);
-
-            IDalamudTextureWrap? icon = _iconCache.GetIcon(item.IconId);
-            if (icon != null)
-            {
-                ImGui.Image(icon.ImGuiHandle, new Vector2(23, 23));
-                ImGui.SameLine(0, 3);
-                ImGui.SetCursorPosY(ImGui.GetCursorPosY() + 3);
-            }
-
-            ImGui.TextColored(inInventory >= item.TotalQuantity ? ImGuiColors.HealerGreen : ImGuiColors.DalamudRed,
-                $"{item.Name} ({inInventory} / {item.TotalQuantity})");
-        }
-
-        ImGui.Unindent(20);
+                Type = Ingredient.EType.Craftable,
+            })
+            .ToList();
     }
 
     private void AddMaterial(Dictionary<uint, int> completedForCurrentCraft, uint itemId, int quantity)
