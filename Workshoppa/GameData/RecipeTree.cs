@@ -9,13 +9,11 @@ namespace Workshoppa.GameData;
 public sealed class RecipeTree
 {
     private readonly IDataManager _dataManager;
-    private readonly IPluginLog _pluginLog;
     private readonly IReadOnlyList<uint> _shopItemsOnly;
 
-    public RecipeTree(IDataManager dataManager, IPluginLog pluginLog)
+    public RecipeTree(IDataManager dataManager)
     {
         _dataManager = dataManager;
-        _pluginLog = pluginLog;
 
         // probably incomplete, e.g. different housing districts have different shop types
         var shopVendorIds = new uint[]
@@ -68,10 +66,10 @@ public sealed class RecipeTree
         // if a recipe has a specific amount crafted, divide the gathered amount by it
         foreach (var ingredient in completeList.Where(x => x is { AmountCrafted: > 1 }))
         {
-            _pluginLog.Information($"Fudging {ingredient.Name}");
+            //_pluginLog.Information($"Fudging {ingredient.Name}");
             foreach (var part in completeList.Where(x => ingredient.DependsOn.Contains(x.ItemId)))
             {
-                _pluginLog.Information($"   → {part.Name}");
+                //_pluginLog.Information($"   → {part.Name}");
 
                 int unmodifiedQuantity = part.TotalQuantity;
                 int roundedQuantity = (int)((unmodifiedQuantity + ingredient.AmountCrafted - 1) / ingredient.AmountCrafted);
@@ -102,7 +100,7 @@ public sealed class RecipeTree
         List<RecipeInfo> ingredients = new();
         foreach (var material in materials.Where(x => x.Type == Ingredient.EType.Craftable))
         {
-            _pluginLog.Information($"Looking up recipe for {material.Name}");
+            //_pluginLog.Information($"Looking up recipe for {material.Name}");
 
             var recipe = GetFirstRecipeForItem(material.ItemId);
             if (recipe == null)
@@ -119,7 +117,7 @@ public sealed class RecipeTree
 
                 Recipe? ingredientRecipe = GetFirstRecipeForItem((uint)ingredient.ItemIngredient);
 
-                _pluginLog.Information($"Adding {item.Name}");
+                //_pluginLog.Information($"Adding {item.Name}");
                 ingredients.Add(new RecipeInfo
                 {
                     ItemId = (uint)ingredient.ItemIngredient,
