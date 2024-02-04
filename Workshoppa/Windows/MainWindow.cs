@@ -603,7 +603,7 @@ internal sealed class MainWindow : LImGui.LWindow
         if (!_plugin.WorkshopTerritories.Contains(_clientState.TerritoryType))
             ImGui.TextColored(ImGuiColors.DalamudRed, "You are not in the Company Workshop.");
         else if (!NearFabricationStation)
-            ImGui.TextColored(ImGuiColors.DalamudRed, "You are not near a Farbrication Station.");
+            ImGui.TextColored(ImGuiColors.DalamudRed, "You are not near a Fabrication Station.");
 
         if (!IsDiscipleOfHand)
             ImGui.TextColored(ImGuiColors.DalamudRed, "You need to be a Disciple of the Hand to start crafting.");
