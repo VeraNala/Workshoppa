@@ -15,7 +15,7 @@ using Workshoppa.Windows;
 
 namespace Workshoppa;
 
-[SuppressMessage("ReSharper", "UnusedType.Global")]
+[SuppressMessage("ReSharper", "ClassNeverInstantiated.Global")]
 public sealed partial class WorkshopPlugin : IDalamudPlugin
 {
     private readonly IReadOnlyList<uint> _fabricationStationIds =

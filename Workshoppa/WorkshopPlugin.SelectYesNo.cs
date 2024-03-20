@@ -13,7 +13,9 @@ partial class WorkshopPlugin
         _pluginLog.Verbose("SelectYesNo post-setup");
 
         AddonSelectYesno* addonSelectYesNo = (AddonSelectYesno*)args.Addon;
-        string text = MemoryHelper.ReadSeString(&addonSelectYesNo->PromptText->NodeText).ToString().Replace("\n", "").Replace("\r", "");
+        string text = MemoryHelper.ReadSeString(&addonSelectYesNo->PromptText->NodeText).ToString()
+            .Replace("\n", "", StringComparison.Ordinal)
+            .Replace("\r", "", StringComparison.Ordinal);
         _pluginLog.Verbose($"YesNo prompt: '{text}'");
 
         if (_repairKitWindow.IsOpen)

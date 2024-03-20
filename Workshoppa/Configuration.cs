@@ -10,7 +10,7 @@ internal sealed class Configuration : IPluginConfiguration
 {
     public int Version { get; set; } = 1;
 
-    public CurrentItem? CurrentlyCraftedItem { get; set; } = null;
+    public CurrentItem? CurrentlyCraftedItem { get; set; }
     public List<QueuedItem> ItemQueue { get; set; } = new();
     public bool EnableRepairKitCalculator { get; set; } = true;
     public bool EnableCeruleumTankCalculator { get; set; } = true;
@@ -27,7 +27,7 @@ internal sealed class Configuration : IPluginConfiguration
         public uint WorkshopItemId { get; set; }
         public bool StartedCrafting { get; set; }
 
-        public uint PhasesComplete { get; set; } = 0;
+        public uint PhasesComplete { get; set; }
         public List<PhaseItem> ContributedItemsInCurrentPhase { get; set; } = new();
 
         public bool UpdateFromCraftState(CraftState craftState)

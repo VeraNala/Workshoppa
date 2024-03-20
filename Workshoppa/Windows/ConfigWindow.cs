@@ -1,12 +1,11 @@
 ﻿using System.Numerics;
-using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using ImGuiNET;
-using LLib;
+using LLib.ImGui;
 
 namespace Workshoppa.Windows;
 
-internal sealed class ConfigWindow : LImGui.LWindow
+internal sealed class ConfigWindow : LWindow
 {
     private readonly DalamudPluginInterface _pluginInterface;
     private readonly Configuration _configuration;

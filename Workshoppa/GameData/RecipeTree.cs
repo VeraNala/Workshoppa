@@ -6,7 +6,7 @@ using Lumina.Excel.GeneratedSheets;
 
 namespace Workshoppa.GameData;
 
-public sealed class RecipeTree
+internal sealed class RecipeTree
 {
     private readonly IDataManager _dataManager;
     private readonly IReadOnlyList<uint> _shopItemsOnly;
@@ -38,7 +38,7 @@ public sealed class RecipeTree
             .AsReadOnly();
     }
 
-    public List<Ingredient> ResolveRecipes(List<Ingredient> materials)
+    public IReadOnlyList<Ingredient> ResolveRecipes(IReadOnlyList<Ingredient> materials)
     {
         // look up recipes recursively
         int limit = 10;
@@ -72,7 +72,8 @@ public sealed class RecipeTree
                 //_pluginLog.Information($"   → {part.Name}");
 
                 int unmodifiedQuantity = part.TotalQuantity;
-                int roundedQuantity = (int)((unmodifiedQuantity + ingredient.AmountCrafted - 1) / ingredient.AmountCrafted);
+                int roundedQuantity =
+                    (int)((unmodifiedQuantity + ingredient.AmountCrafted - 1) / ingredient.AmountCrafted);
                 part.TotalQuantity = part.TotalQuantity - unmodifiedQuantity + roundedQuantity;
             }
         }
@@ -83,13 +84,13 @@ public sealed class RecipeTree
         List<RecipeInfo> sortedList = new List<RecipeInfo>();
         while (sortedList.Count < completeList.Count)
         {
-            var craftable = completeList.Where(x =>
-                !sortedList.Contains(x) && x.DependsOn.All(y => sortedList.Any(z => y == z.ItemId)))
+            var canBeCrafted = completeList.Where(x =>
+                    !sortedList.Contains(x) && x.DependsOn.All(y => sortedList.Any(z => y == z.ItemId)))
                 .ToList();
-            if (craftable.Count == 0)
-                throw new Exception("Unable to sort items");
+            if (canBeCrafted.Count == 0)
+                throw new InvalidOperationException("Unable to sort items");
 
-            sortedList.AddRange(craftable.OrderBy(x => x.Name));
+            sortedList.AddRange(canBeCrafted.OrderBy(x => x.Name));
         }
 
         return sortedList.Cast<Ingredient>().ToList();
@@ -142,7 +143,7 @@ public sealed class RecipeTree
         return ingredients;
     }
 
-    private List<RecipeInfo> ExtendWithAmountCrafted(List<Ingredient> materials)
+    private List<RecipeInfo> ExtendWithAmountCrafted(IEnumerable<Ingredient> materials)
     {
         return materials.Select(x => new
             {
@@ -164,17 +165,17 @@ public sealed class RecipeTree
             .ToList();
     }
 
-    public Recipe? GetFirstRecipeForItem(uint itemId)
+    private Recipe? GetFirstRecipeForItem(uint itemId)
     {
         return _dataManager.GetExcelSheet<Recipe>()!.FirstOrDefault(x => x.RowId > 0 && x.ItemResult.Row == itemId);
     }
 
-    public GatheringItem? GetGatheringItem(uint itemId)
+    private GatheringItem? GetGatheringItem(uint itemId)
     {
         return _dataManager.GetExcelSheet<GatheringItem>()!.FirstOrDefault(x => x.RowId > 0 && (uint)x.Item == itemId);
     }
 
-    public RetainerTaskNormal? GetVentureItem(uint itemId)
+    private RetainerTaskNormal? GetVentureItem(uint itemId)
     {
         return _dataManager.GetExcelSheet<RetainerTaskNormal>()!
             .FirstOrDefault(x => x.RowId > 0 && x.Item.Row == itemId);

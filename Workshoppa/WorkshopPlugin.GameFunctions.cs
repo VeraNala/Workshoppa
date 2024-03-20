@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Numerics;
 using Dalamud.Game.ClientState.Objects.Enums;
@@ -122,7 +123,9 @@ partial class WorkshopPlugin
             LAddon.IsAddonReady(&addonSelectYesno->AtkUnitBase))
         {
             var text = MemoryHelper.ReadSeString(&addonSelectYesno->PromptText->NodeText).ToString();
-            text = text.Replace("\n", "").Replace("\r", "");
+            text = text
+                .Replace("\n", "", StringComparison.Ordinal)
+                .Replace("\r", "", StringComparison.Ordinal);
             if (predicate(text))
             {
                 _pluginLog.Information($"Selecting choice {choice} for '{text}'");
@@ -184,17 +187,22 @@ partial class WorkshopPlugin
         return null;
     }
 
-    private uint ParseAtkItemCountHq(AtkValue atkValue)
+    private static uint ParseAtkItemCountHq(AtkValue atkValue)
     {
         // NQ / HQ string
         // I have no clue, but it doesn't seme like the available HQ item count is strored anywhere in the atkvalues??
         string? s = atkValue.ReadAtkString();
         if (s != null)
         {
-            var parts = s.Replace("\ue03c", "").Split('/');
+            var parts = s.Replace("\ue03c", "", StringComparison.Ordinal).Split('/');
             if (parts.Length > 1)
             {
-                return uint.Parse(parts[1].Replace(",", "").Replace(".", "").Trim());
+                return uint.Parse(
+                    parts[1]
+                        .Replace(",", "", StringComparison.Ordinal)
+                        .Replace(".", "", StringComparison.Ordinal)
+                        .Trim(),
+                    CultureInfo.InvariantCulture);
             }
         }
 

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using System.Data;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 using Dalamud.Plugin.Services;
 using LLib;
@@ -13,19 +14,19 @@ internal sealed class GameStrings
     public GameStrings(IDataManager dataManager, IPluginLog pluginLog)
     {
         PurchaseItemForGil = dataManager.GetRegex<Addon>(3406, addon => addon.Text, pluginLog)
-                             ?? throw new Exception($"Unable to resolve {nameof(PurchaseItemForGil)}");
+                             ?? throw new ConstraintException($"Unable to resolve {nameof(PurchaseItemForGil)}");
         PurchaseItemForCompanyCredits = dataManager.GetRegex<Addon>(3473, addon => addon.Text, pluginLog)
-                                        ?? throw new Exception($"Unable to resolve {nameof(PurchaseItemForCompanyCredits)}");
+                                        ?? throw new ConstraintException($"Unable to resolve {nameof(PurchaseItemForCompanyCredits)}");
         ViewCraftingLog =
             dataManager.GetString<WorkshopDialogue>("TEXT_CMNDEFCOMPANYMANUFACTORY_00150_MENU_CC_NOTE",
-                pluginLog) ?? throw new Exception($"Unable to resolve {nameof(ViewCraftingLog)}");
+                pluginLog) ?? throw new ConstraintException($"Unable to resolve {nameof(ViewCraftingLog)}");
         TurnInHighQualityItem = dataManager.GetString<Addon>(102434, addon => addon.Text, pluginLog)
-                                ?? throw new Exception($"Unable to resolve {nameof(TurnInHighQualityItem)}");
+                                ?? throw new ConstraintException($"Unable to resolve {nameof(TurnInHighQualityItem)}");
         ContributeItems = dataManager.GetRegex<Addon>(6652, addon => addon.Text, pluginLog)
-                          ?? throw new Exception($"Unable to resolve {nameof(ContributeItems)}");
+                          ?? throw new ConstraintException($"Unable to resolve {nameof(ContributeItems)}");
         RetrieveFinishedItem =
             dataManager.GetRegex<WorkshopDialogue>("TEXT_CMNDEFCOMPANYMANUFACTORY_00150_FINISH_CONF", pluginLog)
-            ?? throw new Exception($"Unable to resolve {nameof(RetrieveFinishedItem)}");
+            ?? throw new ConstraintException($"Unable to resolve {nameof(RetrieveFinishedItem)}");
     }
 
     public Regex PurchaseItemForGil { get; }
@@ -36,7 +37,8 @@ internal sealed class GameStrings
     public Regex RetrieveFinishedItem { get; }
 
     [Sheet("custom/001/CmnDefCompanyManufactory_00150")]
-    private class WorkshopDialogue : QuestDialogueText
+    [SuppressMessage("Performance", "CA1812")]
+    private sealed class WorkshopDialogue : QuestDialogueText
     {
     }
 }

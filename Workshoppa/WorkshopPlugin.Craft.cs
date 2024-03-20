@@ -51,12 +51,12 @@ partial class WorkshopPlugin
 
     private void SelectCraftBranch()
     {
-        if (SelectSelectString("contrib", 0, s => s.StartsWith("Contribute materials.")))
+        if (SelectSelectString("contrib", 0, s => s.StartsWith("Contribute materials.", StringComparison.Ordinal)))
         {
             CurrentStage = Stage.ContributeMaterials;
             _continueAt = DateTime.Now.AddSeconds(1);
         }
-        else if (SelectSelectString("advance", 0, s => s.StartsWith("Advance to the next phase of production.")))
+        else if (SelectSelectString("advance", 0, s => s.StartsWith("Advance to the next phase of production.", StringComparison.Ordinal)))
         {
             _pluginLog.Information("Phase is complete");
 
@@ -67,7 +67,7 @@ partial class WorkshopPlugin
             CurrentStage = Stage.TargetFabricationStation;
             _continueAt = DateTime.Now.AddSeconds(3);
         }
-        else if (SelectSelectString("complete", 0, s => s.StartsWith("Complete the construction of")))
+        else if (SelectSelectString("complete", 0, s => s.StartsWith("Complete the construction of", StringComparison.Ordinal)))
         {
             _pluginLog.Information("Item is almost complete, confirming last cutscene");
             CurrentStage = Stage.TargetFabricationStation;

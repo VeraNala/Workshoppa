@@ -119,7 +119,7 @@ partial class WorkshopPlugin
 
     private void ConfirmCraft()
     {
-        if (SelectSelectYesno(0, s => s.StartsWith("Craft ")))
+        if (SelectSelectYesno(0, s => s.StartsWith("Craft ", StringComparison.Ordinal)))
         {
             _configuration.CurrentlyCraftedItem!.StartedCrafting = true;
             _pluginInterface.SavePluginConfig(_configuration);

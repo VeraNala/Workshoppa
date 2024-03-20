@@ -13,12 +13,13 @@ using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using ImGuiNET;
 using LLib;
+using LLib.ImGui;
 using Workshoppa.GameData;
 
 namespace Workshoppa.Windows;
 
 // FIXME The close button doesn't work near the workshop, either hide it or make it work
-internal sealed class MainWindow : LImGui.LWindow
+internal sealed class MainWindow : LWindow
 {
     private static readonly Regex CountAndName = new(@"^(\d{1,5})x?\s+(.*)$", RegexOptions.Compiled);
 
@@ -231,7 +232,7 @@ internal sealed class MainWindow : LImGui.LWindow
             ImGui.InputTextWithHint("", "Filter...", ref _searchString, 256);
 
             foreach (var craft in _workshopCache.Crafts
-                         .Where(x => x.Name.ToLower().Contains(_searchString.ToLower()))
+                         .Where(x => x.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
                          .OrderBy(x => x.WorkshopItemId))
             {
                 IDalamudTextureWrap? icon = _iconCache.GetIcon(craft.IconId);
@@ -319,7 +320,7 @@ internal sealed class MainWindow : LImGui.LWindow
                 ImGui.InputTextWithHint("", "Preset Name...", ref _newPresetName, 64);
 
                 ImGui.BeginDisabled(_configuration.Presets.Any(x =>
-                    x.Name.Equals(_newPresetName, StringComparison.CurrentCultureIgnoreCase)));
+                    x.Name.Equals(_newPresetName, StringComparison.OrdinalIgnoreCase)));
                 if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Save, "Save"))
                 {
                     _configuration.Presets.Add(new Configuration.Preset
@@ -400,7 +401,7 @@ internal sealed class MainWindow : LImGui.LWindow
                             continue;
 
                         var craft = _workshopCache.Crafts.FirstOrDefault(x =>
-                            x.Name.Equals(match.Groups[2].Value, StringComparison.CurrentCultureIgnoreCase));
+                            x.Name.Equals(match.Groups[2].Value, StringComparison.OrdinalIgnoreCase));
                         if (craft != null && int.TryParse(match.Groups[1].Value, out int quantity))
                         {
                             fromClipboardItems.Add(new Configuration.QueuedItem
@@ -590,7 +591,7 @@ internal sealed class MainWindow : LImGui.LWindow
             .ToList();
     }
 
-    private void AddMaterial(Dictionary<uint, int> completedForCurrentCraft, uint itemId, int quantity)
+    private static void AddMaterial(Dictionary<uint, int> completedForCurrentCraft, uint itemId, int quantity)
     {
         if (completedForCurrentCraft.TryGetValue(itemId, out var existingQuantity))
             completedForCurrentCraft[itemId] = quantity + existingQuantity;

@@ -129,7 +129,7 @@ internal sealed class CeruleumTankWindow : ShopWindow
         }
     }
 
-    private string FormatStackCount(int ceruleumTanks)
+    private static string FormatStackCount(int ceruleumTanks)
     {
         int fullStacks = ceruleumTanks / 999;
         int partials = ceruleumTanks % 999;
