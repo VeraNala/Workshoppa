@@ -61,7 +61,7 @@ internal sealed class MainWindow : LWindow
             MaximumSize = new Vector2(500, 9999),
         };
 
-        Flags = ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.MenuBar;
+        Flags = ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.MenuBar;
         AllowClickthrough = false;
     }
 

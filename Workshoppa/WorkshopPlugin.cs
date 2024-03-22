@@ -8,6 +8,7 @@ using Dalamud.Game.Command;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
+using ImGuiNET;
 using LLib;
 using Workshoppa.External;
 using Workshoppa.GameData;
@@ -107,6 +108,11 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
                 _pluginLog.Debug($"Changing stage from {_currentStageInternal} to {value}");
                 _currentStageInternal = value;
             }
+
+            if (value != Stage.Stopped)
+                _mainWindow.Flags |= ImGuiWindowFlags.NoCollapse;
+            else
+                _mainWindow.Flags &= ~ImGuiWindowFlags.NoCollapse;
         }
     }
 
