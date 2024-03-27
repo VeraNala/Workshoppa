@@ -93,9 +93,9 @@ internal sealed class MainWindow : LWindow
             IDalamudTextureWrap? icon = _iconCache.GetIcon(currentCraft.IconId);
             if (icon != null)
             {
-                ImGui.Image(icon.ImGuiHandle, new Vector2(23, 23));
-                ImGui.SameLine(0, 3);
-                ImGui.SetCursorPosY(ImGui.GetCursorPosY() + 3);
+                ImGui.Image(icon.ImGuiHandle, new Vector2(ImGui.GetFrameHeight()));
+                ImGui.SameLine(0, ImGui.GetStyle().ItemInnerSpacing.X);
+                ImGui.SetCursorPosY(ImGui.GetCursorPosY() + (ImGui.GetFrameHeight() - ImGui.GetTextLineHeight()) / 2);
             }
 
             ImGui.TextUnformatted($"{currentCraft.Name}");
@@ -195,11 +195,11 @@ internal sealed class MainWindow : LWindow
             IDalamudTextureWrap? icon = _iconCache.GetIcon(craft.IconId);
             if (icon != null)
             {
-                ImGui.Image(icon.ImGuiHandle, new Vector2(23, 23));
-                ImGui.SameLine(0, 3);
+                ImGui.Image(icon.ImGuiHandle, new Vector2(ImGui.GetFrameHeight()));
+                ImGui.SameLine(0, ImGui.GetStyle().ItemInnerSpacing.X);
             }
 
-            ImGui.SetNextItemWidth(100);
+            ImGui.SetNextItemWidth(Math.Max(100 * ImGui.GetIO().FontGlobalScale, 4 * (ImGui.GetFrameHeight() + ImGui.GetStyle().FramePadding.X)));
             int quantity = item.Quantity;
             if (ImGui.InputInt(craft.Name, ref quantity))
             {
@@ -236,14 +236,14 @@ internal sealed class MainWindow : LWindow
                          .OrderBy(x => x.WorkshopItemId))
             {
                 IDalamudTextureWrap? icon = _iconCache.GetIcon(craft.IconId);
+                Vector2 pos = ImGui.GetCursorPos();
+                Vector2 iconSize = new Vector2(ImGui.GetTextLineHeight() + ImGui.GetStyle().ItemSpacing.Y);
                 if (icon != null)
                 {
-                    ImGui.Image(icon.ImGuiHandle, new Vector2(23, 23));
-                    ImGui.SameLine();
-                    ImGui.SetCursorPosY(ImGui.GetCursorPosY() + 3);
+                    ImGui.SetCursorPos(pos + new Vector2(iconSize.X + ImGui.GetStyle().FramePadding.X, ImGui.GetStyle().ItemSpacing.Y / 2));
                 }
 
-                if (ImGui.Selectable($"{craft.Name}##SelectCraft{craft.WorkshopItemId}"))
+                if (ImGui.Selectable($"{craft.Name}##SelectCraft{craft.WorkshopItemId}", false, ImGuiSelectableFlags.SpanAllColumns))
                 {
                     _configuration.ItemQueue.Add(new Configuration.QueuedItem
                     {
@@ -251,6 +251,13 @@ internal sealed class MainWindow : LWindow
                         Quantity = 1,
                     });
                     Save();
+                }
+
+                if (icon != null)
+                {
+                    ImGui.SameLine(0, 0);
+                    ImGui.SetCursorPos(pos);
+                    ImGui.Image(icon.ImGuiHandle, iconSize);
                 }
             }
 
@@ -535,9 +542,9 @@ internal sealed class MainWindow : LWindow
             IDalamudTextureWrap? icon = _iconCache.GetIcon(item.IconId);
             if (icon != null)
             {
-                ImGui.Image(icon.ImGuiHandle, new Vector2(23, 23));
-                ImGui.SameLine(0, 3);
-                ImGui.SetCursorPosY(ImGui.GetCursorPosY() + 3);
+                ImGui.Image(icon.ImGuiHandle, new Vector2(ImGui.GetFrameHeight()));
+                ImGui.SameLine(0, ImGui.GetStyle().ItemInnerSpacing.X);
+                ImGui.SetCursorPosY(ImGui.GetCursorPosY() + (ImGui.GetFrameHeight() - ImGui.GetTextLineHeight()) / 2);
             }
 
             ImGui.TextColored(inInventory >= item.TotalQuantity ? ImGuiColors.HealerGreen : ImGuiColors.DalamudRed,
