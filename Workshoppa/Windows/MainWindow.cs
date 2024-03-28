@@ -107,8 +107,7 @@ internal sealed class MainWindow : LWindow
                     _checkInventory = !_checkInventory;
 
                 ImGui.SameLine();
-                ImGui.BeginDisabled(!NearFabricationStation);
-                ImGui.BeginDisabled(!IsDiscipleOfHand);
+                ImGui.BeginDisabled(!NearFabricationStation || !IsDiscipleOfHand);
                 if (currentItem.StartedCrafting)
                 {
                     if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Play, "Resume"))
@@ -129,7 +128,9 @@ internal sealed class MainWindow : LWindow
                 ImGui.EndDisabled();
 
                 ImGui.SameLine();
-                ImGui.BeginDisabled(!ImGui.GetIO().KeyCtrl);
+
+                bool keysHeld = ImGui.GetIO().KeyCtrl && ImGui.GetIO().KeyShift;
+                ImGui.BeginDisabled(!keysHeld);
                 if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Times, "Cancel"))
                 {
                     State = ButtonState.Pause;
@@ -139,10 +140,9 @@ internal sealed class MainWindow : LWindow
                 }
 
                 ImGui.EndDisabled();
-                if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled) && !ImGui.GetIO().KeyCtrl)
+                if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled) && !keysHeld)
                     ImGui.SetTooltip(
-                        $"Hold CTRL to remove this as craft. You have to manually use the fabrication station to cancel or finish this craft before you can continue using the queue.");
-                ImGui.EndDisabled();
+                        $"Hold CTRL+SHIFT to remove this as craft. You have to manually use the fabrication station to cancel or finish the workshop project before you can continue using the queue.");
 
                 ShowErrorConditions();
             }
