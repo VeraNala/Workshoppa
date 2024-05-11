@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Dalamud.Configuration;
+using LLib.ImGui;
 using Workshoppa.GameData;
 
 namespace Workshoppa;
@@ -15,6 +16,9 @@ internal sealed class Configuration : IPluginConfiguration
     public bool EnableRepairKitCalculator { get; set; } = true;
     public bool EnableCeruleumTankCalculator { get; set; } = true;
     public List<Preset> Presets { get; set; } = new();
+
+    public WindowConfig MainWindowConfig { get; } = new();
+    public WindowConfig ConfigWindowConfig { get; } = new();
 
     internal sealed class QueuedItem
     {

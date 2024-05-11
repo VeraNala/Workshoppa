@@ -5,7 +5,7 @@ using LLib.ImGui;
 
 namespace Workshoppa.Windows;
 
-internal sealed class ConfigWindow : LWindow
+internal sealed class ConfigWindow : LWindow, IPersistableWindowConfig
 {
     private readonly DalamudPluginInterface _pluginInterface;
     private readonly Configuration _configuration;
@@ -27,6 +27,8 @@ internal sealed class ConfigWindow : LWindow
         };
     }
 
+    public WindowConfig WindowConfig => _configuration.ConfigWindowConfig;
+
     public override void Draw()
     {
         bool enableRepairKitCalculator = _configuration.EnableRepairKitCalculator;
@@ -43,4 +45,6 @@ internal sealed class ConfigWindow : LWindow
             _pluginInterface.SavePluginConfig(_configuration);
         }
     }
+
+    public void SaveWindowConfig() => _pluginInterface.SavePluginConfig(_configuration);
 }

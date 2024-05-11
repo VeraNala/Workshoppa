@@ -19,7 +19,7 @@ using Workshoppa.GameData;
 namespace Workshoppa.Windows;
 
 // FIXME The close button doesn't work near the workshop, either hide it or make it work
-internal sealed class MainWindow : LWindow
+internal sealed class MainWindow : LWindow, IPersistableWindowConfig
 {
     private static readonly Regex CountAndName = new(@"^(\d{1,5})x?\s+(.*)$", RegexOptions.Compiled);
 
@@ -71,6 +71,8 @@ internal sealed class MainWindow : LWindow
 
     private bool IsDiscipleOfHand =>
         _clientState.LocalPlayer != null && _clientState.LocalPlayer.ClassJob.Id is >= 8 and <= 15;
+
+    public WindowConfig WindowConfig => _configuration.MainWindowConfig;
 
     public override void Draw()
     {
@@ -616,6 +618,8 @@ internal sealed class MainWindow : LWindow
         if (!IsDiscipleOfHand)
             ImGui.TextColored(ImGuiColors.DalamudRed, "You need to be a Disciple of the Hand to start crafting.");
     }
+
+    public void SaveWindowConfig() => Save();
 
     public enum ButtonState
     {
