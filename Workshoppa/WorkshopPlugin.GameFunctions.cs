@@ -232,9 +232,9 @@ partial class WorkshopPlugin
         return false;
     }
 
-    public bool HasFreeInventorySlot() => GetFreeInventorySlots() > 0;
+    public bool HasFreeInventorySlot() => CountFreeInventorySlots() > 0;
 
-    public unsafe int GetFreeInventorySlots()
+    public unsafe int CountFreeInventorySlots()
     {
         var inventoryManger = InventoryManager.Instance();
         if (inventoryManger == null)
@@ -248,6 +248,32 @@ partial class WorkshopPlugin
             {
                 var item = container->GetInventorySlot(i);
                 if (item == null || item->ItemID == 0)
+                    ++count;
+            }
+        }
+
+        return count;
+    }
+
+    public unsafe int CountInventorySlotsWithCondition(uint itemId, Predicate<int> predicate)
+    {
+        ArgumentNullException.ThrowIfNull(predicate);
+
+        var inventoryManager = InventoryManager.Instance();
+        if (inventoryManager == null)
+            return 0;
+
+        int count = 0;
+        for (InventoryType t = InventoryType.Inventory1; t <= InventoryType.Inventory4; ++t)
+        {
+            var container = inventoryManager->GetInventoryContainer(t);
+            for (int i = 0; i < container->Size; ++i)
+            {
+                var item = container->GetInventorySlot(i);
+                if (item == null || item->ItemID == 0)
+                    continue;
+
+                if (item->ItemID == itemId && predicate((int)item->Quantity))
                     ++count;
             }
         }

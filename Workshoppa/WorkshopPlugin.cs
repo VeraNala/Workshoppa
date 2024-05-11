@@ -80,7 +80,7 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
             _externalPluginHandler);
         _windowSystem.AddWindow(_repairKitWindow);
         _ceruleumTankWindow = new(this, _pluginLog, _gameGui, addonLifecycle, _configuration,
-            _externalPluginHandler);
+            _externalPluginHandler, _chatGui);
         _windowSystem.AddWindow(_ceruleumTankWindow);
 
         _pluginInterface.UiBuilder.Draw += _windowSystem.Draw;
@@ -90,6 +90,18 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
         _commandManager.AddHandler("/ws", new CommandInfo(ProcessCommand)
         {
             HelpMessage = "Open UI"
+        });
+        _commandManager.AddHandler("/workshoppa", new CommandInfo(ProcessCommand)
+        {
+            ShowInHelp = false,
+        });
+        _commandManager.AddHandler("/buy-tanks", new CommandInfo(ProcessBuyCommand)
+        {
+            HelpMessage = "Buy a given number of ceruleum tank stacks.",
+        });
+        _commandManager.AddHandler("/fill-tanks", new CommandInfo(ProcessFillCommand)
+        {
+            HelpMessage = "Fill your inventory with a given number of ceruleum tank stacks.",
         });
 
         _addonLifecycle.RegisterListener(AddonEvent.PostSetup, "SelectYesno", SelectYesNoPostSetup);
@@ -259,6 +271,22 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
             _mainWindow.Toggle(MainWindow.EOpenReason.Command);
     }
 
+    private void ProcessBuyCommand(string command, string arguments)
+    {
+        if (_ceruleumTankWindow.TryParseBuyRequest(arguments, out int missingQuantity))
+            _ceruleumTankWindow.StartPurchase(missingQuantity);
+        else
+            _chatGui.PrintError($"Usage: {command} <stacks>");
+    }
+
+    private void ProcessFillCommand(string command, string arguments)
+    {
+        if (_ceruleumTankWindow.TryParseFillRequest(arguments, out int missingQuantity))
+            _ceruleumTankWindow.StartPurchase(missingQuantity);
+        else
+            _chatGui.PrintError($"Usage: {command} <stacks>");
+    }
+
     private void OpenMainUi()
         => _mainWindow.Toggle(MainWindow.EOpenReason.PluginInstaller);
 
@@ -268,6 +296,9 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
         _addonLifecycle.UnregisterListener(AddonEvent.PostRefresh, "Request", RequestPostRefresh);
         _addonLifecycle.UnregisterListener(AddonEvent.PostSetup, "Request", RequestPostSetup);
         _addonLifecycle.UnregisterListener(AddonEvent.PostSetup, "SelectYesno", SelectYesNoPostSetup);
+        _commandManager.RemoveHandler("/fill-tanks");
+        _commandManager.RemoveHandler("/buy-tanks");
+        _commandManager.RemoveHandler("/workshoppa");
         _commandManager.RemoveHandler("/ws");
         _pluginInterface.UiBuilder.Draw -= _windowSystem.Draw;
         _pluginInterface.UiBuilder.OpenConfigUi -= _configWindow.Toggle;
