@@ -208,7 +208,7 @@ internal sealed class CeruleumTankWindow : ShopWindow
         }
 
         _chatGui.Print($"Starting purchase of {FormatStackCount(quantity)} ceruleum tanks.");
-        //StartAutoPurchase(quantity);
-        //HandleNextPurchaseStep();
+        StartAutoPurchase(quantity);
+        HandleNextPurchaseStep();
     }
 }
