@@ -20,6 +20,11 @@ internal sealed class ConfigWindow : LWindow
         Position = new Vector2(100, 100);
         PositionCondition = ImGuiCond.FirstUseEver;
         Flags = ImGuiWindowFlags.AlwaysAutoResize;
+
+        SizeConstraints = new WindowSizeConstraints
+        {
+            MinimumSize = new Vector2(270, 50),
+        };
     }
 
     public override void Draw()
