@@ -9,7 +9,7 @@ namespace Workshoppa;
 
 partial class WorkshopPlugin
 {
-    private void InteractWithFabricationStation(GameObject fabricationStation)
+    private void InteractWithFabricationStation(IGameObject fabricationStation)
         => InteractWithTarget(fabricationStation);
 
     private void TakeItemFromQueue()

@@ -6,13 +6,13 @@ namespace Workshoppa.External;
 
 internal sealed class ExternalPluginHandler
 {
-    private readonly DalamudPluginInterface _pluginInterface;
+    private readonly IDalamudPluginInterface _pluginInterface;
     private readonly IPluginLog _pluginLog;
     private readonly PandoraIpc _pandoraIpc;
 
     private bool? _pandoraState;
 
-    public ExternalPluginHandler(DalamudPluginInterface pluginInterface, IPluginLog pluginLog)
+    public ExternalPluginHandler(IDalamudPluginInterface pluginInterface, IPluginLog pluginLog)
     {
         _pluginInterface = pluginInterface;
         _pluginLog = pluginLog;

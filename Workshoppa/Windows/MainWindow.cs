@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 using Dalamud.Interface;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
-using Dalamud.Interface.Internal;
+using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game;
@@ -24,7 +24,7 @@ internal sealed class MainWindow : LWindow, IPersistableWindowConfig
     private static readonly Regex CountAndName = new(@"^(\d{1,5})x?\s+(.*)$", RegexOptions.Compiled);
 
     private readonly WorkshopPlugin _plugin;
-    private readonly DalamudPluginInterface _pluginInterface;
+    private readonly IDalamudPluginInterface _pluginInterface;
     private readonly IClientState _clientState;
     private readonly Configuration _configuration;
     private readonly WorkshopCache _workshopCache;
@@ -37,7 +37,7 @@ internal sealed class MainWindow : LWindow, IPersistableWindowConfig
     private bool _checkInventory;
     private string _newPresetName = string.Empty;
 
-    public MainWindow(WorkshopPlugin plugin, DalamudPluginInterface pluginInterface, IClientState clientState,
+    public MainWindow(WorkshopPlugin plugin, IDalamudPluginInterface pluginInterface, IClientState clientState,
         Configuration configuration, WorkshopCache workshopCache, IconCache iconCache, IChatGui chatGui,
         RecipeTree recipeTree, IPluginLog pluginLog)
         : base("Workshoppa###WorkshoppaMainWindow")
@@ -547,6 +547,8 @@ internal sealed class MainWindow : LWindow, IPersistableWindowConfig
                 ImGui.Image(icon.ImGuiHandle, new Vector2(ImGui.GetFrameHeight()));
                 ImGui.SameLine(0, ImGui.GetStyle().ItemInnerSpacing.X);
                 ImGui.SetCursorPosY(ImGui.GetCursorPosY() + (ImGui.GetFrameHeight() - ImGui.GetTextLineHeight()) / 2);
+
+                icon.Dispose();
             }
 
             ImGui.TextColored(inInventory >= item.TotalQuantity ? ImGuiColors.HealerGreen : ImGuiColors.DalamudRed,

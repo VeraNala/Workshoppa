@@ -18,7 +18,7 @@ namespace Workshoppa;
 
 partial class WorkshopPlugin
 {
-    private unsafe void InteractWithTarget(GameObject obj)
+    private unsafe void InteractWithTarget(IGameObject obj)
     {
         _pluginLog.Information($"Setting target to {obj}");
         /*
@@ -31,7 +31,7 @@ partial class WorkshopPlugin
             (FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)obj.Address, false);
     }
 
-    private float GetDistanceToEventObject(IReadOnlyList<uint> npcIds, out GameObject? o)
+    private float GetDistanceToEventObject(IReadOnlyList<uint> npcIds, out IGameObject? o)
     {
         Vector3? localPlayerPosition = _clientState.LocalPlayer?.Position;
         if (localPlayerPosition != null)
@@ -40,7 +40,7 @@ partial class WorkshopPlugin
             {
                 if (obj.ObjectKind == ObjectKind.EventObj)
                 {
-                    if (npcIds.Contains(GetNpcId(obj)))
+                    if (npcIds.Contains(obj.DataId))
                     {
                         o = obj;
                         float distance = Vector3.Distance(localPlayerPosition.Value,
@@ -55,12 +55,6 @@ partial class WorkshopPlugin
         o = null;
         return float.MaxValue;
     }
-
-    private unsafe uint GetNpcId(GameObject obj)
-    {
-        return ((FFXIVClientStructs.FFXIV.Client.Game.Object.GameObject*)obj.Address)->GetNpcID();
-    }
-
 
     private unsafe AtkUnitBase* GetCompanyCraftingLogAddon()
     {
@@ -80,7 +74,7 @@ partial class WorkshopPlugin
         var agentInterface = AgentModule.Instance()->GetAgentByInternalId(AgentId.CompanyCraftMaterial);
         if (agentInterface != null && agentInterface->IsAgentActive())
         {
-            var addonId = agentInterface->GetAddonID();
+            var addonId = agentInterface->GetAddonId();
             if (addonId == 0)
                 return null;
 
@@ -224,7 +218,7 @@ partial class WorkshopPlugin
                 if (item == null)
                     continue;
 
-                if (item->ItemID == itemId && item->Quantity >= count)
+                if (item->ItemId == itemId && item->Quantity >= count)
                     return true;
             }
         }
@@ -247,7 +241,7 @@ partial class WorkshopPlugin
             for (int i = 0; i < container->Size; ++i)
             {
                 var item = container->GetInventorySlot(i);
-                if (item == null || item->ItemID == 0)
+                if (item == null || item->ItemId == 0)
                     ++count;
             }
         }
@@ -270,10 +264,10 @@ partial class WorkshopPlugin
             for (int i = 0; i < container->Size; ++i)
             {
                 var item = container->GetInventorySlot(i);
-                if (item == null || item->ItemID == 0)
+                if (item == null || item->ItemId == 0)
                     continue;
 
-                if (item->ItemID == itemId && predicate((int)item->Quantity))
+                if (item->ItemId == itemId && predicate((int)item->Quantity))
                     ++count;
             }
         }
@@ -294,10 +288,10 @@ partial class WorkshopPlugin
             for (int i = 0; i < container->Size; ++i)
             {
                 var item = container->GetInventorySlot(i);
-                if (item == null || item->ItemID == 0)
+                if (item == null || item->ItemId == 0)
                     return 99;
 
-                if (item->ItemID == itemId)
+                if (item->ItemId == itemId)
                 {
                     max += (999 - (int)item->Quantity);
                     if (max >= 99)

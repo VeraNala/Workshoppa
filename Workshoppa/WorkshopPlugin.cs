@@ -25,7 +25,7 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
     internal readonly IReadOnlyList<ushort> WorkshopTerritories = new ushort[] { 423, 424, 425, 653, 984 }.AsReadOnly();
     private readonly WindowSystem _windowSystem = new WindowSystem(nameof(WorkshopPlugin));
 
-    private readonly DalamudPluginInterface _pluginInterface;
+    private readonly IDalamudPluginInterface _pluginInterface;
     private readonly IGameGui _gameGui;
     private readonly IFramework _framework;
     private readonly ICondition _condition;
@@ -50,7 +50,7 @@ public sealed partial class WorkshopPlugin : IDalamudPlugin
     private DateTime _continueAt = DateTime.MinValue;
     private DateTime _fallbackAt = DateTime.MaxValue;
 
-    public WorkshopPlugin(DalamudPluginInterface pluginInterface, IGameGui gameGui, IFramework framework,
+    public WorkshopPlugin(IDalamudPluginInterface pluginInterface, IGameGui gameGui, IFramework framework,
         ICondition condition, IClientState clientState, IObjectTable objectTable, IDataManager dataManager,
         ICommandManager commandManager, IPluginLog pluginLog, IAddonLifecycle addonLifecycle, IChatGui chatGui,
         ITextureProvider textureProvider)

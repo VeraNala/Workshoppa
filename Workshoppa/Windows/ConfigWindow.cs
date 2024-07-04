@@ -7,10 +7,10 @@ namespace Workshoppa.Windows;
 
 internal sealed class ConfigWindow : LWindow, IPersistableWindowConfig
 {
-    private readonly DalamudPluginInterface _pluginInterface;
+    private readonly IDalamudPluginInterface _pluginInterface;
     private readonly Configuration _configuration;
 
-    public ConfigWindow(DalamudPluginInterface pluginInterface, Configuration configuration)
+    public ConfigWindow(IDalamudPluginInterface pluginInterface, Configuration configuration)
         : base("Workshoppa - Configuration###WorkshoppaConfigWindow")
 
     {
