@@ -126,7 +126,7 @@ internal sealed class RecipeTree
                     continue;
 
                 Item? item = ingredient.Value;
-                if (item == null)
+                if (item == null || !IsValidItem(item.RowId))
                     continue;
 
                 Recipe? ingredientRecipe = GetFirstRecipeForItem(ingredient.Row);
@@ -194,9 +194,9 @@ internal sealed class RecipeTree
             .FirstOrDefault(x => x.RowId > 0 && x.Item.Row == itemId);
     }
 
-    public bool IsValidItem(uint itemId)
+    private static bool IsValidItem(uint itemId)
     {
-        return itemId != 0 && itemId != uint.MaxValue;
+        return itemId > 19 && itemId != uint.MaxValue;
     }
 
     private sealed class RecipeInfo : Ingredient
