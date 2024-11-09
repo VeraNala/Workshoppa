@@ -5,10 +5,9 @@ using Dalamud.Interface.Components;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
-using LLib;
 using LLib.GameUI;
+using LLib.Shop.Model;
 using Workshoppa.External;
-using Workshoppa.GameData.Shops;
 using ValueType = FFXIVClientStructs.FFXIV.Component.GUI.ValueType;
 
 namespace Workshoppa.Windows;
@@ -17,7 +16,6 @@ internal sealed class CeruleumTankWindow : ShopWindow
 {
     private const int CeruleumTankItemId = 10155;
 
-    private readonly WorkshopPlugin _plugin;
     private readonly IPluginLog _pluginLog;
     private readonly Configuration _configuration;
     private readonly IChatGui _chatGui;
@@ -26,28 +24,31 @@ internal sealed class CeruleumTankWindow : ShopWindow
     private int _buyStackCount;
     private bool _buyPartialStacks = true;
 
-    public CeruleumTankWindow(WorkshopPlugin plugin, IPluginLog pluginLog, IGameGui gameGui,
-        IAddonLifecycle addonLifecycle, Configuration configuration, ExternalPluginHandler externalPluginHandler,
+    public CeruleumTankWindow(
+        IPluginLog pluginLog,
+        IGameGui gameGui,
+        IAddonLifecycle addonLifecycle,
+        Configuration configuration,
+        ExternalPluginHandler externalPluginHandler,
         IChatGui chatGui)
-        : base("Ceruleum Tanks###WorkshoppaCeruleumTankWindow", "FreeCompanyCreditShop", plugin, pluginLog, gameGui,
+        : base("Ceruleum Tanks###WorkshoppaCeruleumTankWindow", "FreeCompanyCreditShop", pluginLog, gameGui,
             addonLifecycle, externalPluginHandler)
     {
-        _plugin = plugin;
         _pluginLog = pluginLog;
         _chatGui = chatGui;
         _configuration = configuration;
     }
 
-    protected override bool Enabled => _configuration.EnableCeruleumTankCalculator;
+    public override bool IsEnabled => _configuration.EnableCeruleumTankCalculator;
 
-    protected override unsafe void UpdateShopStock(AtkUnitBase* addon)
+    public override unsafe void UpdateShopStock(AtkUnitBase* addon)
     {
         if (addon->AtkValuesCount != 170)
         {
             _pluginLog.Error(
                 $"Unexpected amount of atkvalues for FreeCompanyCreditShop addon ({addon->AtkValuesCount})");
             _companyCredits = 0;
-            ItemForSale = null;
+            Shop.ItemForSale = null;
             return;
         }
 
@@ -57,11 +58,11 @@ internal sealed class CeruleumTankWindow : ShopWindow
         uint itemCount = atkValues[9].UInt;
         if (itemCount == 0)
         {
-            ItemForSale = null;
+            Shop.ItemForSale = null;
             return;
         }
 
-        ItemForSale = Enumerable.Range(0, (int)itemCount)
+        Shop.ItemForSale = Enumerable.Range(0, (int)itemCount)
             .Select(i => new ItemForSale
             {
                 Position = i,
@@ -73,18 +74,18 @@ internal sealed class CeruleumTankWindow : ShopWindow
             .FirstOrDefault(x => x.ItemId == CeruleumTankItemId);
     }
 
-    protected override int GetCurrencyCount() => _companyCredits;
+    public override int GetCurrencyCount() => _companyCredits;
 
     public override void Draw()
     {
-        if (ItemForSale == null)
+        if (Shop.ItemForSale == null)
         {
             IsOpen = false;
             return;
         }
 
-        int ceruleumTanks = GetItemCount(CeruleumTankItemId);
-        int freeInventorySlots = _plugin.CountFreeInventorySlots();
+        int ceruleumTanks = Shop.GetItemCount(CeruleumTankItemId);
+        int freeInventorySlots = Shop.CountFreeInventorySlots();
 
         ImGui.Text("Inventory");
         ImGui.Indent();
@@ -94,7 +95,7 @@ internal sealed class CeruleumTankWindow : ShopWindow
 
         ImGui.Separator();
 
-        if (PurchaseState == null)
+        if (Shop.PurchaseState == null)
         {
             ImGui.SetNextItemWidth(100);
             ImGui.InputInt("Stacks to Buy", ref _buyStackCount);
@@ -108,27 +109,27 @@ internal sealed class CeruleumTankWindow : ShopWindow
         if (_buyPartialStacks && ceruleumTanks % 999 > 0)
             missingItems += (999 - ceruleumTanks % 999);
 
-        if (PurchaseState != null)
+        if (Shop.PurchaseState != null)
         {
-            HandleNextPurchaseStep();
-            if (PurchaseState != null)
+            Shop.HandleNextPurchaseStep();
+            if (Shop.PurchaseState != null)
             {
-                ImGui.Text($"Buying {FormatStackCount(PurchaseState.ItemsLeftToBuy)}...");
+                ImGui.Text($"Buying {FormatStackCount(Shop.PurchaseState.ItemsLeftToBuy)}...");
                 if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Times, "Cancel Auto-Buy"))
-                    CancelAutoPurchase();
+                    Shop.CancelAutoPurchase();
             }
         }
         else
         {
-            int toPurchase = Math.Min(GetMaxItemsToPurchase(), missingItems);
+            int toPurchase = Math.Min(Shop.GetMaxItemsToPurchase(), missingItems);
             if (toPurchase > 0)
             {
                 ImGui.Spacing();
                 if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.DollarSign,
-                        $"Auto-Buy {FormatStackCount(toPurchase)} for {ItemForSale.Price * toPurchase:N0} CC"))
+                        $"Auto-Buy {FormatStackCount(toPurchase)} for {Shop.ItemForSale.Price * toPurchase:N0} CC"))
                 {
-                    StartAutoPurchase(toPurchase);
-                    HandleNextPurchaseStep();
+                    Shop.StartAutoPurchase(toPurchase);
+                    Shop.HandleNextPurchaseStep();
                 }
             }
         }
@@ -144,12 +145,12 @@ internal sealed class CeruleumTankWindow : ShopWindow
         return $"{fullStacks:N0} {stacks}";
     }
 
-    protected override unsafe void FirePurchaseCallback(AtkUnitBase* addonShop, int buyNow)
+    public override unsafe void TriggerPurchase(AtkUnitBase* addonShop, int buyNow)
     {
         var buyItem = stackalloc AtkValue[]
         {
             new() { Type = ValueType.Int, Int = 0 },
-            new() { Type = ValueType.UInt, UInt = (uint)ItemForSale!.Position },
+            new() { Type = ValueType.UInt, UInt = (uint)Shop.ItemForSale!.Position },
             new() { Type = ValueType.UInt, UInt = (uint)buyNow },
         };
         addonShop->FireCallback(3, buyItem);
@@ -163,9 +164,9 @@ internal sealed class CeruleumTankWindow : ShopWindow
             return false;
         }
 
-        int freeInventorySlots = _plugin.CountFreeInventorySlots();
+        int freeInventorySlots = Shop.CountFreeInventorySlots();
         stackCount = Math.Min(freeInventorySlots, stackCount);
-        missingQuantity = Math.Min(GetMaxItemsToPurchase(), stackCount * 999);
+        missingQuantity = Math.Min(Shop.GetMaxItemsToPurchase(), stackCount * 999);
         return true;
     }
 
@@ -177,25 +178,25 @@ internal sealed class CeruleumTankWindow : ShopWindow
             return false;
         }
 
-        int freeInventorySlots = _plugin.CountFreeInventorySlots();
-        int partialStacks = _plugin.CountInventorySlotsWithCondition(CeruleumTankItemId, q => q < 999);
-        int fullStacks = _plugin.CountInventorySlotsWithCondition(CeruleumTankItemId, q => q == 999);
+        int freeInventorySlots = Shop.CountFreeInventorySlots();
+        int partialStacks = Shop.CountInventorySlotsWithCondition(CeruleumTankItemId, q => q < 999);
+        int fullStacks = Shop.CountInventorySlotsWithCondition(CeruleumTankItemId, q => q == 999);
 
         int tanks = Math.Min((fullStacks + partialStacks + freeInventorySlots) * 999,
             Math.Max(stackCount * 999, (fullStacks + partialStacks) * 999));
         _pluginLog.Information("T: " + tanks);
-        int owned = GetItemCount(CeruleumTankItemId);
+        int owned = Shop.GetItemCount(CeruleumTankItemId);
         if (tanks <= owned)
             missingQuantity = 0;
         else
-            missingQuantity = Math.Min(GetMaxItemsToPurchase(), tanks - owned);
+            missingQuantity = Math.Min(Shop.GetMaxItemsToPurchase(), tanks - owned);
 
         return true;
     }
 
     public void StartPurchase(int quantity)
     {
-        if (!IsOpen || ItemForSale == null)
+        if (!IsOpen || Shop.ItemForSale == null)
         {
             _chatGui.PrintError("Could not start purchase, shop window is not open.");
             return;
@@ -208,7 +209,7 @@ internal sealed class CeruleumTankWindow : ShopWindow
         }
 
         _chatGui.Print($"Starting purchase of {FormatStackCount(quantity)} ceruleum tanks.");
-        StartAutoPurchase(quantity);
-        HandleNextPurchaseStep();
+        Shop.StartAutoPurchase(quantity);
+        Shop.HandleNextPurchaseStep();
     }
 }
