@@ -4,8 +4,8 @@ using System.Text.RegularExpressions;
 using Dalamud.Plugin.Services;
 using LLib;
 using Lumina.Excel;
-using Lumina.Excel.CustomSheets;
-using Lumina.Excel.GeneratedSheets;
+using Lumina.Excel.Sheets;
+using Lumina.Text.ReadOnly;
 
 namespace Workshoppa.GameData;
 
@@ -38,7 +38,16 @@ internal sealed class GameStrings
 
     [Sheet("custom/001/CmnDefCompanyManufactory_00150")]
     [SuppressMessage("Performance", "CA1812")]
-    private sealed class WorkshopDialogue : QuestDialogueText
+    private readonly struct WorkshopDialogue(ExcelPage page, uint offset, uint row)
+        : IQuestDialogueText, IExcelRow<WorkshopDialogue>
     {
+        public uint RowId => row;
+
+        public ReadOnlySeString Key => page.ReadString(offset, offset);
+        public ReadOnlySeString Value => page.ReadString(offset + 4, offset);
+
+        static WorkshopDialogue IExcelRow<WorkshopDialogue>.Create(ExcelPage page, uint offset,
+            uint row) =>
+            new(page, offset, row);
     }
 }

@@ -70,7 +70,7 @@ internal sealed class MainWindow : LWindow, IPersistableWindowConfig
     public ButtonState State { get; set; } = ButtonState.None;
 
     private bool IsDiscipleOfHand =>
-        _clientState.LocalPlayer != null && _clientState.LocalPlayer.ClassJob.Id is >= 8 and <= 15;
+        _clientState.LocalPlayer != null && _clientState.LocalPlayer.ClassJob.RowId is >= 8 and <= 15;
 
     public WindowConfig WindowConfig => _configuration.MainWindowConfig;
 

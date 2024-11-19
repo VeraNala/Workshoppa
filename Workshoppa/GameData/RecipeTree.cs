@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Dalamud.Plugin.Services;
-using Lumina.Excel.GeneratedSheets2;
+using Lumina.Excel.Sheets;
 
 namespace Workshoppa.GameData;
 
@@ -31,9 +31,10 @@ internal sealed class RecipeTree
             262211, // Z'ranmaia, upper decks
         };
 
-        _shopItemsOnly = _dataManager.GetExcelSheet<GilShopItem>()!
+        _shopItemsOnly = _dataManager.GetSubrowExcelSheet<GilShopItem>()
+            .Flatten()
             .Where(x => shopVendorIds.Contains(x.RowId))
-            .Select(x => x.Item.Row)
+            .Select(x => x.Item.RowId)
             .Where(x => x > 0)
             .Distinct()
             .ToList()
@@ -121,32 +122,32 @@ internal sealed class RecipeTree
 
             for (int i = 0; i < 8; ++ i)
             {
-                var ingredient = recipe.Ingredient[i];
-                if (ingredient == null || ingredient.Row == 0)
+                var ingredient = recipe.Value.Ingredient[i];
+                if (!ingredient.IsValid || ingredient.RowId == 0)
                     continue;
 
-                Item? item = ingredient.Value;
-                if (item == null || !IsValidItem(item.RowId))
+                Item item = ingredient.Value;
+                if (!IsValidItem(item.RowId))
                     continue;
 
-                Recipe? ingredientRecipe = GetFirstRecipeForItem(ingredient.Row);
+                Recipe? ingredientRecipe = GetFirstRecipeForItem(ingredient.RowId);
 
                 //_pluginLog.Information($"Adding {item.Name}");
                 ingredients.Add(new RecipeInfo
                 {
-                    ItemId = ingredient.Row,
-                    Name = item.Name,
-                    TotalQuantity = material.TotalQuantity * recipe.AmountIngredient[i],
+                    ItemId = ingredient.RowId,
+                    Name = item.Name.ToString(),
+                    TotalQuantity = material.TotalQuantity * recipe.Value.AmountIngredient[i],
                     Type =
-                        _shopItemsOnly.Contains(ingredient.Row) ? Ingredient.EType.ShopItem :
+                        _shopItemsOnly.Contains(ingredient.RowId) ? Ingredient.EType.ShopItem :
                         ingredientRecipe != null ? Ingredient.EType.Craftable :
-                        GetGatheringItem(ingredient.Row) != null ? Ingredient.EType.Gatherable :
-                        GetVentureItem(ingredient.Row) != null ? Ingredient.EType.Gatherable :
+                        GetGatheringItem(ingredient.RowId) != null ? Ingredient.EType.Gatherable :
+                        GetVentureItem(ingredient.RowId) != null ? Ingredient.EType.Gatherable :
                         Ingredient.EType.Other,
 
                     AmountCrafted = ingredientRecipe?.AmountResult ?? 1,
-                    DependsOn = ingredientRecipe?.Ingredient.Where(x => x != null && IsValidItem(x.Row))
-                                    .Select(x => x.Row)
+                    DependsOn = ingredientRecipe?.Ingredient.Where(x => x.IsValid && IsValidItem(x.RowId))
+                                    .Select(x => x.RowId)
                                     .ToList()
                                 ?? new(),
                 });
@@ -170,9 +171,9 @@ internal sealed class RecipeTree
                 Name = x.Ingredient.Name,
                 TotalQuantity = x.Ingredient.TotalQuantity,
                 Type = _shopItemsOnly.Contains(x.Ingredient.ItemId) ? Ingredient.EType.ShopItem : x.Ingredient.Type,
-                AmountCrafted = x.Recipe!.AmountResult,
-                DependsOn = x.Recipe.Ingredient.Where(y => y != null && IsValidItem(y.Row))
-                    .Select(y => y.Row)
+                AmountCrafted = x.Recipe!.Value.AmountResult,
+                DependsOn = x.Recipe.Value.Ingredient.Where(y => y.IsValid && IsValidItem(y.RowId))
+                    .Select(y => y.RowId)
                     .ToList(),
             })
             .ToList();
@@ -180,18 +181,18 @@ internal sealed class RecipeTree
 
     private Recipe? GetFirstRecipeForItem(uint itemId)
     {
-        return _dataManager.GetExcelSheet<Recipe>()!.FirstOrDefault(x => x.RowId > 0 && x.ItemResult.Row == itemId);
+        return _dataManager.GetExcelSheet<Recipe>().FirstOrDefault(x => x.RowId > 0 && x.ItemResult.RowId == itemId);
     }
 
     private GatheringItem? GetGatheringItem(uint itemId)
     {
-        return _dataManager.GetExcelSheet<GatheringItem>()!.FirstOrDefault(x => x.RowId > 0 && x.Item.Row == itemId);
+        return _dataManager.GetExcelSheet<GatheringItem>().FirstOrDefault(x => x.RowId > 0 && x.Item.RowId == itemId);
     }
 
     private RetainerTaskNormal? GetVentureItem(uint itemId)
     {
-        return _dataManager.GetExcelSheet<RetainerTaskNormal>()!
-            .FirstOrDefault(x => x.RowId > 0 && x.Item.Row == itemId);
+        return _dataManager.GetExcelSheet<RetainerTaskNormal>()
+            .FirstOrDefault(x => x.RowId > 0 && x.Item.RowId == itemId);
     }
 
     private static bool IsValidItem(uint itemId)
