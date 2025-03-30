@@ -11,6 +11,7 @@ using FFXIVClientStructs.FFXIV.Client.Game.Control;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
+using InteropGenerator.Runtime;
 using LLib.GameUI;
 using Workshoppa.GameData;
 
@@ -95,11 +96,11 @@ partial class WorkshopPlugin
             if (entries < choice)
                 return false;
 
-            var textPointer = addonSelectString->PopupMenu.PopupMenu.EntryNames[choice];
-            if (textPointer == null)
+            CStringPointer textPointer = addonSelectString->PopupMenu.PopupMenu.EntryNames[choice];
+            if (!textPointer.HasValue)
                 return false;
 
-            var text = MemoryHelper.ReadSeStringNullTerminated((nint)textPointer).ToString();
+            var text = MemoryHelper.ReadSeStringNullTerminated(new nint(textPointer)).ToString();
             _pluginLog.Verbose($"SelectSelectString for {marker}, Choice would be '{text}'");
             if (predicate(text))
             {
