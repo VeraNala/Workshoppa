@@ -29,7 +29,7 @@ internal sealed class ConfigWindow : LWindow, IPersistableWindowConfig
 
     public WindowConfig WindowConfig => _configuration.ConfigWindowConfig;
 
-    public override void Draw()
+    public override void DrawContent()
     {
         bool enableRepairKitCalculator = _configuration.EnableRepairKitCalculator;
         if (ImGui.Checkbox("Enable Repair Kit Calculator", ref enableRepairKitCalculator))

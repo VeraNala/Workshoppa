@@ -82,7 +82,7 @@ internal sealed class RepairKitWindow : ShopWindow
 
     public override int GetCurrencyCount() => Shop.GetItemCount(1);
 
-    public override void Draw()
+    public override void DrawContent()
     {
         int darkMatterClusters = GetDarkMatterClusterCount();
         if (Shop.ItemForSale == null || darkMatterClusters == 0)

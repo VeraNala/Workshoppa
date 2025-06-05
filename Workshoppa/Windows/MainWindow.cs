@@ -74,7 +74,7 @@ internal sealed class MainWindow : LWindow, IPersistableWindowConfig
 
     public WindowConfig WindowConfig => _configuration.MainWindowConfig;
 
-    public override void Draw()
+    public override void DrawContent()
     {
         if (ImGui.BeginMenuBar())
         {

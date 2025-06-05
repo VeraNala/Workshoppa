@@ -76,7 +76,7 @@ internal sealed class CeruleumTankWindow : ShopWindow
 
     public override int GetCurrencyCount() => _companyCredits;
 
-    public override void Draw()
+    public override void DrawContent()
     {
         if (Shop.ItemForSale == null)
         {
