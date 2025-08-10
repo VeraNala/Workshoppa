@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Linq;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Components;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Component.GUI;
-using ImGuiNET;
 using LLib.GameUI;
 using LLib.Shop.Model;
 using Workshoppa.External;

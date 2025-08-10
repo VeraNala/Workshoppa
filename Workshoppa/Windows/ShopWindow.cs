@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Numerics;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Component.GUI;
-using ImGuiNET;
 using LLib.ImGui;
 using LLib.Shop;
 using Workshoppa.External;

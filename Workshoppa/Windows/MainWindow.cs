@@ -4,14 +4,15 @@ using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Text.RegularExpressions;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Textures.TextureWraps;
+using Dalamud.Interface.Utility.Raii;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game;
-using ImGuiNET;
 using LLib;
 using LLib.ImGui;
 using Workshoppa.GameData;
@@ -95,7 +96,7 @@ internal sealed class MainWindow : LWindow, IPersistableWindowConfig
             IDalamudTextureWrap? icon = _iconCache.GetIcon(currentCraft.IconId);
             if (icon != null)
             {
-                ImGui.Image(icon.ImGuiHandle, new Vector2(ImGui.GetFrameHeight()));
+                ImGui.Image(icon.Handle, new Vector2(ImGui.GetFrameHeight()));
                 ImGui.SameLine(0, ImGui.GetStyle().ItemInnerSpacing.X);
                 ImGui.SetCursorPosY(ImGui.GetCursorPosY() + (ImGui.GetFrameHeight() - ImGui.GetTextLineHeight()) / 2);
             }
@@ -190,14 +191,14 @@ internal sealed class MainWindow : LWindow, IPersistableWindowConfig
         Configuration.QueuedItem? itemToRemove = null;
         for (int i = 0; i < _configuration.ItemQueue.Count; ++i)
         {
-            ImGui.PushID($"ItemQueue{i}");
+            using var _ = ImRaii.PushId($"ItemQueue{i}");
             var item = _configuration.ItemQueue[i];
             var craft = _workshopCache.Crafts.Single(x => x.WorkshopItemId == item.WorkshopItemId);
 
             IDalamudTextureWrap? icon = _iconCache.GetIcon(craft.IconId);
             if (icon != null)
             {
-                ImGui.Image(icon.ImGuiHandle, new Vector2(ImGui.GetFrameHeight()));
+                ImGui.Image(icon.Handle, new Vector2(ImGui.GetFrameHeight()));
                 ImGui.SameLine(0, ImGui.GetStyle().ItemInnerSpacing.X);
             }
 
@@ -210,15 +211,12 @@ internal sealed class MainWindow : LWindow, IPersistableWindowConfig
             }
 
             ImGui.OpenPopupOnItemClick($"###Context{i}");
-            if (ImGui.BeginPopupContextItem($"###Context{i}"))
+            using var popup = ImRaii.ContextPopup($"###Context{i}");
+            if (popup)
             {
                 if (ImGui.MenuItem($"Remove {craft.Name}"))
                     itemToRemove = item;
-
-                ImGui.EndPopup();
             }
-
-            ImGui.PopID();
         }
 
         if (itemToRemove != null)
@@ -259,7 +257,7 @@ internal sealed class MainWindow : LWindow, IPersistableWindowConfig
                 {
                     ImGui.SameLine(0, 0);
                     ImGui.SetCursorPos(pos);
-                    ImGui.Image(icon.ImGuiHandle, iconSize);
+                    ImGui.Image(icon.Handle, iconSize);
                 }
             }
 
@@ -498,7 +496,7 @@ internal sealed class MainWindow : LWindow, IPersistableWindowConfig
     /// </summary>
     private unsafe string? GetClipboardText()
     {
-        byte* ptr = ImGuiNative.igGetClipboardText();
+        byte* ptr = ImGuiNative.GetClipboardText();
         if (ptr == null)
             return null;
 
@@ -544,7 +542,7 @@ internal sealed class MainWindow : LWindow, IPersistableWindowConfig
             IDalamudTextureWrap? icon = _iconCache.GetIcon(item.IconId);
             if (icon != null)
             {
-                ImGui.Image(icon.ImGuiHandle, new Vector2(ImGui.GetFrameHeight()));
+                ImGui.Image(icon.Handle, new Vector2(ImGui.GetFrameHeight()));
                 ImGui.SameLine(0, ImGui.GetStyle().ItemInnerSpacing.X);
                 ImGui.SetCursorPosY(ImGui.GetCursorPosY() + (ImGui.GetFrameHeight() - ImGui.GetTextLineHeight()) / 2);
 

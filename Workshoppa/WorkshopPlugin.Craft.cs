@@ -151,7 +151,7 @@ partial class WorkshopPlugin
 
     private unsafe void RequestPostSetup(AddonEvent type, AddonArgs addon)
     {
-        var addonRequest = (AddonRequest*)addon.Addon;
+        var addonRequest = (AddonRequest*)addon.Addon.Address;
         _pluginLog.Verbose($"{nameof(RequestPostSetup)}: {CurrentStage}, {addonRequest->EntryCount}");
         if (CurrentStage != Stage.OpenRequestItemWindow)
             return;
@@ -185,7 +185,7 @@ partial class WorkshopPlugin
             new() { Type = ValueType.UInt, UInt = 0 },
             new() { Type = 0, Int = 0 },
         };
-        ((AddonContextIconMenu*)addon.Addon)->AtkUnitBase.FireCallback(5, selectSlot);
+        ((AddonContextIconMenu*)addon.Addon.Address)->AtkUnitBase.FireCallback(5, selectSlot);
     }
 
     private unsafe void RequestPostRefresh(AddonEvent type, AddonArgs addon)
@@ -194,7 +194,7 @@ partial class WorkshopPlugin
         if (CurrentStage != Stage.ConfirmRequestItemWindow)
             return;
 
-        var addonRequest = (AddonRequest*)addon.Addon;
+        var addonRequest = (AddonRequest*)addon.Addon.Address;
         if (addonRequest->EntryCount != 1)
             return;
 
