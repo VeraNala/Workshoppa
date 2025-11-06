@@ -7,6 +7,11 @@ steps:
   - name: prepare dalamud
     image: git.carvel.li/actions/download-dalamud
 
+  - name: initialize submodules
+    image: alpine/git
+    commands:
+      - git submodule update --init --recursive
+
   - name: dotnet restore
     image: mcr.microsoft.com/dotnet/sdk:9.0-noble
     commands:
